@@ -1,0 +1,683 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "MCXCL: configure",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["-S", "src", "-B", "build", "-DBUILD_MEX=OFF"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCXCL: build",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "build", "--parallel", "4"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOrder": "sequence",
+      "dependsOn": ["MCXCL: configure"],
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "MCX: list devices",
+      "type": "shell",
+      "command": "${workspaceFolder}/bin/mcxcl",
+      "args": ["-L"],
+      "options": {
+        "env": {
+          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: create venv",
+      "type": "shell",
+      "command": "python3",
+      "args": ["-m", "venv", "${workspaceFolder}/test/min_example/.venv"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: setup python",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/pip",
+      "args": ["install", "-r", "${workspaceFolder}/test/min_example/requirements.txt"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOrder": "sequence",
+      "dependsOn": ["MCX demo: create venv"],
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: make volume",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": ["make_volume.py"],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: config obs",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "make_config.py",
+        "--mua-inclusion",
+        "0.03",
+        "--session",
+        "obs",
+        "--photons",
+        "10000",
+        "--output",
+        "configs/obs.json"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: config fwd",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "make_config.py",
+        "--mua-inclusion",
+        "0.01",
+        "--session",
+        "fwd",
+        "--photons",
+        "10000",
+        "--output",
+        "configs/case.json"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: config obs 200k",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "make_config.py",
+        "--mua-inclusion",
+        "0.03",
+        "--session",
+        "obs",
+        "--photons",
+        "200000",
+        "--output",
+        "configs/obs.json"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: config fwd 200k",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "make_config.py",
+        "--mua-inclusion",
+        "0.01",
+        "--session",
+        "fwd",
+        "--photons",
+        "200000",
+        "--output",
+        "configs/case.json"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: config obs 1M",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "make_config.py",
+        "--mua-inclusion",
+        "0.03",
+        "--session",
+        "obs",
+        "--photons",
+        "1000000",
+        "--output",
+        "configs/obs.json"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: config fwd 1M",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "make_config.py",
+        "--mua-inclusion",
+        "0.01",
+        "--session",
+        "fwd",
+        "--photons",
+        "1000000",
+        "--output",
+        "configs/case.json"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: forward obs",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "run_forward.py",
+        "--config",
+        "configs/obs.json",
+        "--session",
+        "obs",
+        "--photons",
+        "10000",
+        "--mcx",
+        "${workspaceFolder}/bin/mcxcl",
+        "--mcx-arg=--atomic",
+        "--mcx-arg=0"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: forward fwd",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "run_forward.py",
+        "--config",
+        "configs/case.json",
+        "--session",
+        "fwd",
+        "--photons",
+        "10000",
+        "--mcx",
+        "${workspaceFolder}/bin/mcxcl",
+        "--mcx-arg=--atomic",
+        "--mcx-arg=0"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: forward obs 200k",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "run_forward.py",
+        "--config",
+        "configs/obs.json",
+        "--session",
+        "obs",
+        "--photons",
+        "200000",
+        "--mcx",
+        "${workspaceFolder}/bin/mcxcl",
+        "--mcx-arg=--atomic",
+        "--mcx-arg=0"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: forward fwd 200k",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "run_forward.py",
+        "--config",
+        "configs/case.json",
+        "--session",
+        "fwd",
+        "--photons",
+        "200000",
+        "--mcx",
+        "${workspaceFolder}/bin/mcxcl",
+        "--mcx-arg=--atomic",
+        "--mcx-arg=0"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: forward obs 1M",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "run_forward.py",
+        "--config",
+        "configs/obs.json",
+        "--session",
+        "obs",
+        "--photons",
+        "1000000",
+        "--mcx",
+        "${workspaceFolder}/bin/mcxcl",
+        "--mcx-arg=--atomic",
+        "--mcx-arg=0"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: forward fwd 1M",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "run_forward.py",
+        "--config",
+        "configs/case.json",
+        "--session",
+        "fwd",
+        "--photons",
+        "1000000",
+        "--mcx",
+        "${workspaceFolder}/bin/mcxcl",
+        "--mcx-arg=--atomic",
+        "--mcx-arg=0"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: replay",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "run_replay.py",
+        "--config",
+        "configs/case.json",
+        "--seed",
+        "outputs/fwd_detp.jdat",
+        "--detectors",
+        "9",
+        "--mcx",
+        "${workspaceFolder}/bin/mcxcl",
+        "--mcx-arg=--atomic",
+        "--mcx-arg=0"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: optimize",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": ["optimize.py"],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: visualize",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": ["visualize.py"],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: mock",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": ["optimize.py", "--mock"],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example"
+      },
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "MCX demo: make volume",
+        "MCX demo: config obs",
+        "MCX demo: config fwd"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: simulation 10k",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "MCX demo: make volume",
+        "MCX demo: config obs",
+        "MCX demo: config fwd",
+        "MCX demo: forward obs",
+        "MCX demo: forward fwd",
+        "MCX demo: replay",
+        "MCX demo: optimize"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: simulation 200k",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "MCX demo: make volume",
+        "MCX demo: config obs 200k",
+        "MCX demo: config fwd 200k",
+        "MCX demo: forward obs 200k",
+        "MCX demo: forward fwd 200k",
+        "MCX demo: replay",
+        "MCX demo: optimize"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: simulation 1M",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "MCX demo: make volume",
+        "MCX demo: config obs 1M",
+        "MCX demo: config fwd 1M",
+        "MCX demo: forward obs 1M",
+        "MCX demo: forward fwd 1M",
+        "MCX demo: replay",
+        "MCX demo: optimize"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX demo: simulation 200k + visualize",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "MCX demo: simulation 200k",
+        "MCX demo: visualize"
+      ],
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "MCX demo: simulation 1M + visualize",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "MCX demo: simulation 1M",
+        "MCX demo: visualize"
+      ],
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "MCX demo: local full 200k",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/run_local_demo.sh",
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "MCX": "${workspaceFolder}/bin/mcxcl",
+          "MCX_EXTRA_ARGS": "--atomic 0",
+          "PHOTONS": "200000",
+          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache",
+          "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
+        }
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "MCX compare equal budget: 1M",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "run_equal_budget_comparison.py",
+        "--photons",
+        "1000000",
+        "--mcx",
+        "${workspaceFolder}/bin/mcxcl",
+        "--mcx-arg=--atomic",
+        "--mcx-arg=0"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache",
+          "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
+        }
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "MCX compare equal budget: 10M",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "run_equal_budget_comparison.py",
+        "--photons",
+        "10000000",
+        "--mcx",
+        "${workspaceFolder}/bin/mcxcl",
+        "--mcx-arg=--atomic",
+        "--mcx-arg=0"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache",
+          "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
+        }
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "MCX compare equal budget: 100M",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "run_equal_budget_comparison.py",
+        "--photons",
+        "100000000",
+        "--mcx",
+        "${workspaceFolder}/bin/mcxcl",
+        "--mcx-arg=--atomic",
+        "--mcx-arg=0"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache",
+          "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
+        }
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "MCX compare scattering equal budget: 1M",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "run_equal_budget_comparison.py",
+        "--photons",
+        "1000000",
+        "--property",
+        "mus",
+        "--obs-mua-inclusion",
+        "0.01",
+        "--fwd-mua-inclusion",
+        "0.01",
+        "--obs-mus-inclusion",
+        "12.0",
+        "--fwd-mus-inclusion",
+        "10.0",
+        "--mcx",
+        "${workspaceFolder}/bin/mcxcl",
+        "--mcx-arg=--atomic",
+        "--mcx-arg=0"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache",
+          "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
+        }
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "MCX compare scattering equal budget: 10M",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "run_equal_budget_comparison.py",
+        "--photons",
+        "10000000",
+        "--property",
+        "mus",
+        "--obs-mua-inclusion",
+        "0.01",
+        "--fwd-mua-inclusion",
+        "0.01",
+        "--obs-mus-inclusion",
+        "12.0",
+        "--fwd-mus-inclusion",
+        "10.0",
+        "--mcx",
+        "${workspaceFolder}/bin/mcxcl",
+        "--mcx-arg=--atomic",
+        "--mcx-arg=0"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache",
+          "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
+        }
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "MCX compare scattering equal budget: 100M",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "run_equal_budget_comparison.py",
+        "--photons",
+        "100000000",
+        "--property",
+        "mus",
+        "--obs-mua-inclusion",
+        "0.01",
+        "--fwd-mua-inclusion",
+        "0.01",
+        "--obs-mus-inclusion",
+        "12.0",
+        "--fwd-mus-inclusion",
+        "10.0",
+        "--mcx",
+        "${workspaceFolder}/bin/mcxcl",
+        "--mcx-arg=--atomic",
+        "--mcx-arg=0"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache",
+          "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
+        }
+      },
+      "problemMatcher": [],
+      "group": "build"
+    }
+  ]
+}

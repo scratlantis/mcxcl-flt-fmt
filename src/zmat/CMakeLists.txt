@@ -9,6 +9,7 @@ cmake_minimum_required(VERSION 3.5)
 project(zmat)
 
 option(STATIC_LIB "Build static library" ON)
+find_package(Threads REQUIRED)
 
 # C Options
 set(CMAKE_C_FLAGS "-g -Wall -O3 -fPIC")
@@ -37,6 +38,10 @@ set(LZMA_SDK_SOURCES
     easylzma/lzma/7zCrcOpt.c
     easylzma/lzma/CpuArch.c
     easylzma/lzma/Lzma2Dec.c
+    easylzma/lzma/Lzma2DecMt.c
+    easylzma/lzma/Lzma2Enc.c
+    easylzma/lzma/MtCoder.c
+    easylzma/lzma/MtDec.c
     easylzma/lzma/Xz.c
     easylzma/lzma/XzCrc64.c
     easylzma/lzma/XzCrc64Opt.c
@@ -47,7 +52,9 @@ set(LZMA_SDK_SOURCES
     easylzma/lzma/Delta.c
     easylzma/lzma/Bra86.c
     easylzma/lzma/7zStream.c
+    easylzma/lzma/LzFindMt.c
     easylzma/lzma/LzFindOpt.c
+    easylzma/lzma/Threads.c
 )
 
 set(ZMAT_SOURCES
@@ -67,12 +74,15 @@ endif()
 
 target_compile_definitions(zmat PRIVATE
     ZMAT_USE_LZMA_SDK
+    COMPRESS_MF_MT
     _7ZIP_ST
     NO_BLOSC2
     NO_ZLIB
     NO_ZSTD
     _LARGEFILE64_SOURCE=1
 )
+
+target_link_libraries(zmat PUBLIC Threads::Threads)
 
 if(Matlab_FOUND)
     matlab_add_mex(

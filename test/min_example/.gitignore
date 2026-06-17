@@ -1,0 +1,6 @@
+.venv/
+.matplotlib/
+__pycache__/
+configs/
+data/
+outputs/

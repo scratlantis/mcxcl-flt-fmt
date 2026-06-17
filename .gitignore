@@ -1,0 +1,22 @@
+# Local CMake/build outputs
+build/
+bin/
+lib/
+src/mcx_core.clh
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+*.o
+*.obj
+*.d
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Local Python/editor state
+__pycache__/
+.venv/
+.matplotlib/
