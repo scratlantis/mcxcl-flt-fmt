@@ -5,7 +5,13 @@
       "label": "MCXCL: configure",
       "type": "shell",
       "command": "cmake",
-      "args": ["-S", "src", "-B", "build", "-DBUILD_MEX=OFF"],
+      "args": [
+        "-S",
+        "src",
+        "-B",
+        "build",
+        "-DBUILD_MEX=OFF"
+      ],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -15,12 +21,19 @@
       "label": "MCXCL: build",
       "type": "shell",
       "command": "cmake",
-      "args": ["--build", "build", "--parallel", "4"],
+      "args": [
+        "--build",
+        "build",
+        "--parallel",
+        "4"
+      ],
       "options": {
         "cwd": "${workspaceFolder}"
       },
       "dependsOrder": "sequence",
-      "dependsOn": ["MCXCL: configure"],
+      "dependsOn": [
+        "MCXCL: configure"
+      ],
       "problemMatcher": [],
       "group": "build"
     },
@@ -28,7 +41,9 @@
       "label": "MCX: list devices",
       "type": "shell",
       "command": "${workspaceFolder}/bin/mcxcl",
-      "args": ["-L"],
+      "args": [
+        "-L"
+      ],
       "options": {
         "env": {
           "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
@@ -42,7 +57,11 @@
       "label": "MCX demo: create venv",
       "type": "shell",
       "command": "python3",
-      "args": ["-m", "venv", "${workspaceFolder}/test/min_example/.venv"],
+      "args": [
+        "-m",
+        "venv",
+        "${workspaceFolder}/test/min_example/.venv"
+      ],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -52,19 +71,49 @@
       "label": "MCX demo: setup python",
       "type": "shell",
       "command": "${workspaceFolder}/test/min_example/.venv/bin/pip",
-      "args": ["install", "-r", "${workspaceFolder}/test/min_example/requirements.txt"],
+      "args": [
+        "install",
+        "-r",
+        "${workspaceFolder}/test/min_example/requirements.txt"
+      ],
       "options": {
         "cwd": "${workspaceFolder}"
       },
       "dependsOrder": "sequence",
-      "dependsOn": ["MCX demo: create venv"],
+      "dependsOn": [
+        "MCX demo: create venv"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "MCX fluo replay: build pmcxcl",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "setup.py",
+        "build_ext",
+        "--inplace"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/pmcxcl",
+        "env": {
+          "DEBUG": "0",
+          "CMAKE_BUILD_PARALLEL_LEVEL": "4"
+        }
+      },
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "MCX demo: setup python"
+      ],
       "problemMatcher": []
     },
     {
       "label": "MCX demo: make volume",
       "type": "shell",
       "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
-      "args": ["make_volume.py"],
+      "args": [
+        "make_volume.py"
+      ],
       "options": {
         "cwd": "${workspaceFolder}/test/min_example"
       },
@@ -383,7 +432,9 @@
       "label": "MCX demo: optimize",
       "type": "shell",
       "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
-      "args": ["optimize.py"],
+      "args": [
+        "optimize.py"
+      ],
       "options": {
         "cwd": "${workspaceFolder}/test/min_example"
       },
@@ -393,7 +444,9 @@
       "label": "MCX demo: visualize",
       "type": "shell",
       "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
-      "args": ["visualize.py"],
+      "args": [
+        "visualize.py"
+      ],
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
         "env": {
@@ -403,10 +456,40 @@
       "problemMatcher": []
     },
     {
+      "label": "MCX fluo replay: visualize buffers",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "run_fluo_replay_path.py",
+        "--photons",
+        "1000000",
+        "--min-detected",
+        "1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/pmcxcl",
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache",
+          "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
+        }
+      },
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "MCX fluo replay: build pmcxcl"
+      ],
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
       "label": "MCX demo: mock",
       "type": "shell",
       "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
-      "args": ["optimize.py", "--mock"],
+      "args": [
+        "optimize.py",
+        "--mock"
+      ],
       "options": {
         "cwd": "${workspaceFolder}/test/min_example"
       },

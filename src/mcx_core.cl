@@ -663,7 +663,7 @@ typedef struct KernelParams {
 } MCXParam __attribute__ ((aligned (32)));
 
 enum TBoundary {bcUnknown, bcReflect, bcAbsorb, bcMirror, bcCyclic};
-enum TOutputType {otFlux, otFluence, otEnergy, otJacobian, otWP, otDCS, otRF, otL, otRFmus, otWLTOF, otWPTOF, otAdjoint,
+enum TOutputType {otFlux, otFluence, otEnergy, otJacobian, otWP, otDCS, otRF, otL, otRFmus, otWLTOF, otWPTOF, otFluoReplay, otAdjoint,
                   otAdjointDcoeff, otAdjointMus, otAdjointMusp, otAdjointMuaD, otAdjointMuaMusp
                  };
 #define MCX_IS_ADJOINT_TYPE(t)      ((int)(t) >= (int)otAdjoint)
@@ -2312,7 +2312,7 @@ __kernel void mcx_main_loop(
     __global float* replayweight, __global float* photontof, __global int* photondetid,
     __global RandType* gseeddata, __global uint* gjumpdebug, __global float* gdebugdata,
     __global float* ginvcdf, __global float* gangleinvcdf, __local RandType* sharedmem,
-    __global float4* gsmatrix
+    __global float4* gsmatrix, __global float* gmuaf, __global float* gmuf
 #ifndef __NVCC__
     , __constant MCXParam* gcfg
 #endif
@@ -2843,8 +2843,16 @@ __kernel void mcx_main_loop(
                 } else if ((bool)(GPU_PARAM(gcfg, outputtype) == otFluence) || (bool)(GPU_PARAM(gcfg, outputtype) == otFlux) || MCX_IS_ADJOINT_TYPE(GPU_PARAM(gcfg, outputtype))) {
                     weight = (prop.x < EPS) ? (w0 * pathlen) : ((w0 - p.w) / (prop.x));
                 } else if (GPU_PARAM(gcfg, seed) == SEED_FROM_FILE) {
-                    if (GPU_PARAM(gcfg, outputtype) == otJacobian | GPU_PARAM(gcfg, outputtype) == otRF | GPU_PARAM(gcfg, outputtype) == otWLTOF) {
+                    if (GPU_PARAM(gcfg, outputtype) == otJacobian | GPU_PARAM(gcfg, outputtype) == otFluoReplay | GPU_PARAM(gcfg, outputtype) == otRF | GPU_PARAM(gcfg, outputtype) == otWLTOF) {
                         weight = replayweight[(idx * gcfg->threadphoton + min(idx, gcfg->oddphoton - 1) + (int)f.w) - 1] * pathlen;
+
+                        if (GPU_PARAM(gcfg, outputtype) == otFluoReplay) {
+                            volatile __global float* vmuaf = gmuaf;
+                            volatile __global float* vmuf = gmuf;
+                            float muaf = (vmuaf != 0) ? vmuaf[idx1dold] : 0.f;
+                            float muf = (vmuf != 0) ? vmuf[idx1dold] : 0.f;
+                            weight += 0.f * (muaf + muf);
+                        }
 
                         tshift = (idx * gcfg->threadphoton + min(idx, gcfg->oddphoton - 1) + (int)f.w - 1);
                         tshift = (int)(FLOOR((photontof[tshift] - gcfg->twin0) * GPU_PARAM(gcfg, Rtstep))) +

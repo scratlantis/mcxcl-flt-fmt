@@ -52,6 +52,11 @@ cl_event kernelevent;
 
 const char* VendorList[] = {"Unknown", "NVIDIA", "AMD", "Intel", "IntelGPU", "AppleCPU", "AppleGPU", "ArmGPU"};
 
+#ifdef MCX_EMBED_CL
+extern "C" unsigned char mcx_core_cl[];
+extern "C" unsigned int mcx_core_cl_len;
+#endif
+
 const char* sourceflag[] = {"-DMCX_SRC_PENCIL", "-DMCX_SRC_ISOTROPIC", "-DMCX_SRC_CONE",
                             "-DMCX_SRC_GAUSSIAN", "-DMCX_SRC_PLANAR", "-DMCX_SRC_PATTERN", "-DMCX_SRC_FOURIER",
                             "-DMCX_SRC_ARCSINE", "-DMCX_SRC_DISK", "-DMCX_SRC_FOURIERX", "-DMCX_SRC_FOURIERX2D",
@@ -465,7 +470,7 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
     cl_uint  totalcucore;
     cl_uint  devid = 0;
     cl_mem* gmedia = NULL, *gproperty = NULL, *gparam = NULL;
-    cl_mem* gsmatrix = NULL;
+    cl_mem* gsmatrix = NULL, *gmuaf = NULL, *gmuf = NULL;
     cl_mem greplaydetid = NULL, greplayw = NULL, greplaytof = NULL, *gsrcpattern = NULL;
     cl_mem* gfield = NULL, *gdetphoton = NULL, *gseed = NULL, *genergy = NULL, *gseeddata = NULL;
     cl_mem* gprogress = NULL, *gdetected = NULL, *gdetpos = NULL, *gjumpdebug = NULL, *gdebugdata = NULL, *ginvcdf = NULL, *gangleinvcdf = NULL;
@@ -570,10 +575,12 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
         ginvcdf = (cl_mem*)calloc(workdev, sizeof(cl_mem));
         gangleinvcdf = (cl_mem*)calloc(workdev, sizeof(cl_mem));
         gsmatrix = (cl_mem*)calloc(workdev, sizeof(cl_mem));
+        gmuaf = (cl_mem*)calloc(workdev, sizeof(cl_mem));
+        gmuf = (cl_mem*)calloc(workdev, sizeof(cl_mem));
 
         if (!mcxqueue || !waittoread || !gseed || !gmedia || !gproperty || !gparam || !gfield ||
                 !gdetphoton || !genergy || !gprogress || !gdetected || !gdetpos || !gjumpdebug ||
-                !gdebugdata || !gseeddata || !gsrcpattern || !ginvcdf || !gangleinvcdf || !gsmatrix) {
+                !gdebugdata || !gseeddata || !gsrcpattern || !ginvcdf || !gangleinvcdf || !gsmatrix || !gmuaf || !gmuf) {
             status = CL_OUT_OF_HOST_MEMORY;
             break;
         }
@@ -826,6 +833,17 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
                 gsmatrix[i] = NULL;
             }
 
+            if (cfg->muaf) {
+                OCL_TRY(((gmuaf[i] = clCreateBuffer(mcxcontext, RO_MEM, sizeof(float) * cfg->dim.x * cfg->dim.y * cfg->dim.z, cfg->muaf, &status), status)));
+            } else {
+                gmuaf[i] = NULL;
+            }
+
+            if (cfg->muf) {
+                OCL_TRY(((gmuf[i] = clCreateBuffer(mcxcontext, RO_MEM, sizeof(float) * cfg->dim.x * cfg->dim.y * cfg->dim.z, cfg->muf, &status), status)));
+            } else {
+                gmuf[i] = NULL;
+            }
 
         }
 
@@ -852,7 +870,17 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
         fflush(cfg->flog);
         mcx_flush(cfg);
 
-        OCL_TRY(((mcxprogram = clCreateProgramWithSource(mcxcontext, 1, (const char**) & (cfg->clsource), NULL, &status), status)));
+        size_t source_len = 0;
+#ifdef MCX_EMBED_CL
+        if (cfg->clsource == (char*)mcx_core_cl) {
+            source_len = mcx_core_cl_len;
+        }
+#endif
+        if (source_len == 0 && cfg->clsource) {
+            source_len = strlen(cfg->clsource);
+        }
+        MCX_ASSERT_ALLOC(cfg->clsource);
+        OCL_TRY(((mcxprogram = clCreateProgramWithSource(mcxcontext, 1, (const char**) & (cfg->clsource), &source_len, &status), status)));
 
         if (cfg->optlevel >= 1) {
             snprintf(opt, MAX_JIT_OPT_LEN - strlen(opt), "%s ", "-cl-mad-enable -DMCX_USE_NATIVE");
@@ -1036,6 +1064,10 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
             OCL_ASSERT((clSetKernelArg(mcxkernel[i], 17, sizeof(cl_mem), ((cfg->nangle) ? (void*)(gangleinvcdf + i) : NULL) )));
             OCL_ASSERT((clSetKernelArg(mcxkernel[i], 18, sharedbuf, NULL)));
             OCL_ASSERT((clSetKernelArg(mcxkernel[i], 19, sizeof(cl_mem), (void*)(gsmatrix + i))));
+            cl_mem null_muaf = NULL;
+            cl_mem null_muf = NULL;
+            OCL_ASSERT((clSetKernelArg(mcxkernel[i], 20, sizeof(cl_mem), (cfg->muaf ? (void*)(gmuaf + i) : (void*)(&null_muaf)))));
+            OCL_ASSERT((clSetKernelArg(mcxkernel[i], 21, sizeof(cl_mem), (cfg->muf ? (void*)(gmuf + i) : (void*)(&null_muf)))));
         }
 
         if (status != CL_SUCCESS) {
@@ -1103,7 +1135,7 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
                     param.blockphoton = (int)(cfg->nphoton * cfg->workload[devid] / (fullload * nblock * cfg->respin));
                     param.blockextra  = (int)(cfg->nphoton * cfg->workload[devid] / (fullload * cfg->respin) - param.blockphoton * nblock);
                     OCL_ASSERT((clEnqueueWriteBuffer(mcxqueue[devid], gparam[devid], CL_TRUE, 0, sizeof(MCXParam), &param, 0, NULL, NULL)));
-                    OCL_ASSERT((clSetKernelArg(mcxkernel[devid], 20, sizeof(cl_mem), (void*)(gparam + devid))));
+                    OCL_ASSERT((clSetKernelArg(mcxkernel[devid], 22, sizeof(cl_mem), (void*)(gparam + devid))));
 
                     // launch mcxkernel
                     OCL_ASSERT((clEnqueueNDRangeKernel(mcxqueue[devid], mcxkernel[devid], 1, NULL, &gpu[devid].autothread, &gpu[devid].autoblock, 0, NULL, &waittoread[devid])));
@@ -1394,7 +1426,7 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
                 }
             } else if (cfg->outputtype == otEnergy || cfg->outputtype == otL) {
                 scale[0] = 1.f / cfg->energytot;
-            } else if (cfg->outputtype == otJacobian || cfg->outputtype == otWP || cfg->outputtype == otDCS || cfg->outputtype == otRF || cfg->outputtype == otRFmus || cfg->outputtype == otWLTOF || cfg->outputtype == otWPTOF) {
+            } else if (cfg->outputtype == otJacobian || cfg->outputtype == otWP || cfg->outputtype == otDCS || cfg->outputtype == otRF || cfg->outputtype == otRFmus || cfg->outputtype == otWLTOF || cfg->outputtype == otWPTOF || cfg->outputtype == otFluoReplay) {
                 if (cfg->seed == SEED_FROM_FILE && cfg->replaydet == -1) {
                     int detid;
 
@@ -1783,6 +1815,12 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
         if (gsmatrix && gsmatrix[i])     {
             clReleaseMemObject(gsmatrix[i]);
         }
+        if (gmuaf && gmuaf[i])           {
+            clReleaseMemObject(gmuaf[i]);
+        }
+        if (gmuf && gmuf[i])             {
+            clReleaseMemObject(gmuf[i]);
+        }
         if (mcxkernel && mcxkernel[i])   {
             clReleaseKernel(mcxkernel[i]);
         }
@@ -1808,6 +1846,8 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
     free(ginvcdf);
     free(gangleinvcdf);
     free(gsmatrix);
+    free(gmuaf);
+    free(gmuf);
     free(mcxkernel);
     free(waittoread);
     free(Pdet);

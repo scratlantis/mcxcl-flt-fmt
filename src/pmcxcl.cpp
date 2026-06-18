@@ -63,25 +63,21 @@ int seed_byte = 0;
  * MCX Config. The scalar is cast to the python type before assignment.
  */
 #define GET_SCALAR_FIELD(src_pydict, dst_mcx_config, property, py_type) if ((src_pydict).contains(#property))\
-    {try {(dst_mcx_config).property = py_type((src_pydict)[#property]);\
-            std::cout << #property << ": " << (float) (dst_mcx_config).property << std::endl;} \
+    {try {(dst_mcx_config).property = py_type((src_pydict)[#property]);} \
         catch (const std::runtime_error &err)\
         {throw py::type_error(std::string("Failed to assign MCX property " + std::string(#property) + ". Reason: " + err.what()));}\
     }
 
 #define GET_VEC3_FIELD(src, dst, prop, type) if (src.contains(#prop)) {try {auto list = py::list(src[#prop]);\
-            dst.prop = {list[0].cast<type>(), list[1].cast<type>(), list[2].cast<type>()};\
-            std::cout << #prop << ": [" << dst.prop.x << ", " << dst.prop.y << ", " << dst.prop.z << "]\n";} \
+            dst.prop = {list[0].cast<type>(), list[1].cast<type>(), list[2].cast<type>()};} \
         catch (const std::runtime_error &err ) {throw py::type_error(std::string("Failed to assign MCX property " + std::string(#prop) + ". Reason: " + err.what()));}}
 
 #define GET_VEC4_FIELD(src, dst, prop, type) if (src.contains(#prop)) {try {auto list = py::list(src[#prop]);\
-            dst.prop = {list[0].cast<type>(), list[1].cast<type>(), list[2].cast<type>(), list[3].cast<type>()}; \
-            std::cout << #prop << ": [" << dst.prop.x << ", " << dst.prop.y << ", " << dst.prop.z << ", " << dst.prop.w << "]\n";} \
+            dst.prop = {list[0].cast<type>(), list[1].cast<type>(), list[2].cast<type>(), list[3].cast<type>()};} \
         catch (const std::runtime_error &err ) {throw py::type_error(std::string("Failed to assign MCX property " + std::string(#prop) + ". Reason: " + err.what()));}}
 
 #define GET_VEC34_FIELD(src, dst, prop, type) if (src.contains(#prop)) {try {auto list = py::list(src[#prop]);\
-            dst.prop = {list[0].cast<type>(), list[1].cast<type>(), list[2].cast<type>(), list.size() == 4 ? list[3].cast<type>() : dst.prop.w}; \
-            std::cout << #prop << ": [" << dst.prop.x << ", " << dst.prop.y << ", " << dst.prop.z << ", " << dst.prop.w << "]\n";} \
+            dst.prop = {list[0].cast<type>(), list[1].cast<type>(), list[2].cast<type>(), list.size() == 4 ? list[3].cast<type>() : dst.prop.w};} \
         catch (const std::runtime_error &err ) {throw py::type_error(std::string("Failed to assign MCX property " + std::string(#prop) + ". Reason: " + err.what()));}                                                                 \
     }
 
@@ -425,6 +421,41 @@ void parseVolume(const py::dict& user_cfg, Config& mcx_config) {
     }
 }
 
+void parseFluorescenceVolume(const py::dict& user_cfg, Config& mcx_config, const char* field_name, float** target) {
+    if (!user_cfg.contains(field_name)) {
+        return;
+    }
+
+    auto f_style_volume = py::array_t < float, py::array::f_style | py::array::forcecast >::ensure(user_cfg[field_name]);
+
+    if (!f_style_volume) {
+        throw py::value_error(std::string("Invalid ") + field_name + " field value");
+    }
+
+    auto buffer = f_style_volume.request();
+
+    if (buffer.shape.size() != 3 ||
+            buffer.shape.at(0) != mcx_config.dim.x ||
+            buffer.shape.at(1) != mcx_config.dim.y ||
+            buffer.shape.at(2) != mcx_config.dim.z) {
+        throw py::value_error(std::string("the '") + field_name + "' field must be a 3D float array matching cfg.vol dimensions");
+    }
+
+    size_t dimxyz = (size_t)mcx_config.dim.x * mcx_config.dim.y * mcx_config.dim.z;
+
+    if (*target) {
+        free(*target);
+    }
+
+    *target = static_cast<float*>(malloc(dimxyz * sizeof(float)));
+
+    if (!*target) {
+        throw std::bad_alloc();
+    }
+
+    memcpy(*target, buffer.ptr, dimxyz * sizeof(float));
+}
+
 void parse_config(const py::dict& user_cfg, Config& mcx_config) {
     mcx_initcfg(&mcx_config);
 
@@ -473,6 +504,8 @@ void parse_config(const py::dict& user_cfg, Config& mcx_config) {
     GET_VEC3_FIELD(user_cfg, mcx_config, crop1, uint);
     GET_VEC4_FIELD(user_cfg, mcx_config, srciquv, float);
     parseVolume(user_cfg, mcx_config);
+    parseFluorescenceVolume(user_cfg, mcx_config, "muaf", &mcx_config.muaf);
+    parseFluorescenceVolume(user_cfg, mcx_config, "muf", &mcx_config.muf);
 
     if (user_cfg.contains("srcpos")) {
         auto f_style_volume = py::array_t < float, py::array::f_style | py::array::forcecast >::ensure(user_cfg["srcpos"]);
@@ -851,7 +884,7 @@ void parse_config(const py::dict& user_cfg, Config& mcx_config) {
 
     if (user_cfg.contains("outputtype")) {
         std::string output_type_str = py::str(user_cfg["outputtype"]);
-        const char* outputtype[] = {"flux", "fluence", "energy", "jacobian", "nscat", "wl", "wp", "wm", "rf", "length", "rfmus", "wltof", "wptof", "adjoint",
+        const char* outputtype[] = {"flux", "fluence", "energy", "jacobian", "nscat", "wl", "wp", "wm", "rf", "length", "rfmus", "wltof", "wptof", "fluo", "adjoint",
                                     "adjoint_dcoeff", "adjoint_mus", "adjoint_musp", "adjoint_mua_d", "adjoint_mua_musp", nullptr
                                    };
         char outputstr[MAX_SESSION_LENGTH] = {'\0'};

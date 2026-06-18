@@ -140,8 +140,8 @@ const char saveflag[] = {'D', 'S', 'P', 'M', 'X', 'V', 'W', 'I', '\0'};
  * p: scattering counts for computing Jacobians for mus
  */
 
-const char outputtype[] = {'x', 'f', 'e', 'j', 'p', 'm', 'r', 'l', 's', 't', 'b', 'a', 'd', 'u', 'v', 'w', 'q', '\0'};
-/*                          flux flnc enrg jcbn wp  dcs  rf  plen rfms wltof wptof adj  D   mus  musp muad mamp */
+const char outputtype[] = {'x', 'f', 'e', 'j', 'p', 'm', 'r', 'l', 's', 't', 'b', 'c', 'a', 'd', 'u', 'v', 'w', 'q', '\0'};
+/*                          flux flnc enrg jcbn wp  dcs  rf  plen rfms wltof wptof fluo adj  D   mus  musp muad mamp */
 
 
 /**
@@ -238,6 +238,8 @@ void mcx_initcfg(Config* cfg) {
     cfg->detdir = NULL;
     cfg->vol = NULL;
     cfg->srcpattern = NULL;
+    cfg->muaf = NULL;
+    cfg->muf = NULL;
     cfg->session[0] = '\0';
     cfg->printnum = 0;
     cfg->minenergy = 0.f;
@@ -417,6 +419,14 @@ void mcx_clearcfg(Config* cfg) {
 
     if (cfg->replay.detid) {
         free(cfg->replay.detid);
+    }
+
+    if (cfg->muaf) {
+        free(cfg->muaf);
+    }
+
+    if (cfg->muf) {
+        free(cfg->muf);
     }
 
     if (cfg->exportfield) {
@@ -1887,7 +1897,7 @@ void mcx_validatecfg(Config* cfg, float* detps, int dimdetps[2], int seedbyte) {
         }
     }
 
-    if ((cfg->outputtype == otJacobian || cfg->outputtype == otWP || cfg->outputtype == otDCS || cfg->outputtype == otRF || cfg->outputtype == otRFmus || cfg->outputtype == otWLTOF || cfg->outputtype == otWPTOF)
+    if ((cfg->outputtype == otJacobian || cfg->outputtype == otWP || cfg->outputtype == otDCS || cfg->outputtype == otRF || cfg->outputtype == otRFmus || cfg->outputtype == otWLTOF || cfg->outputtype == otWPTOF || cfg->outputtype == otFluoReplay)
             && cfg->seed != SEED_FROM_FILE) {
         MCX_ERROR(-6, "Jacobian output is only valid in the reply mode. Please define cfg.seed");
     }
@@ -3840,7 +3850,7 @@ void mcx_loadseedfile(Config* cfg) {
     cfg->seed = SEED_FROM_FILE;
     cfg->nphoton = his.savedphoton;
 
-    if (cfg->outputtype == otJacobian || cfg->outputtype == otWP || cfg->outputtype == otDCS  || cfg->outputtype == otRF || cfg->outputtype == otRFmus || cfg->outputtype == otWLTOF || cfg->outputtype == otWPTOF) { //cfg->replaydet>0
+    if (cfg->outputtype == otJacobian || cfg->outputtype == otWP || cfg->outputtype == otDCS  || cfg->outputtype == otRF || cfg->outputtype == otRFmus || cfg->outputtype == otWLTOF || cfg->outputtype == otWPTOF || cfg->outputtype == otFluoReplay) { //cfg->replaydet>0
         int i, j, hasdetid = 0, offset;
         float plen, *ppath;
         hasdetid = SAVE_DETID(his.savedetflag);
@@ -5157,7 +5167,7 @@ void mcx_parsecmd(int argc, char* argv[], Config* cfg) {
         exit(0);
     }
 
-    if ((cfg->outputtype == otJacobian || cfg->outputtype == otWP || cfg->outputtype == otDCS || cfg->outputtype == otRF || cfg->outputtype == otRFmus || cfg->outputtype == otWLTOF || cfg->outputtype == otWPTOF) && cfg->seed != SEED_FROM_FILE) {
+    if ((cfg->outputtype == otJacobian || cfg->outputtype == otWP || cfg->outputtype == otDCS || cfg->outputtype == otRF || cfg->outputtype == otRFmus || cfg->outputtype == otWLTOF || cfg->outputtype == otWPTOF || cfg->outputtype == otFluoReplay) && cfg->seed != SEED_FROM_FILE) {
         MCX_ERROR(-1, T_("Jacobian output is only valid in the reply mode. Please give an mch file after '-E'."));
     }
 
@@ -5534,12 +5544,13 @@ where possible parameters include (the first value in [*|*] is the default)\n\
 \n"S_BOLD S_CYAN"\
 == Output options ==\n"S_RESET"\
  -s sessionid  (--session)     a string to label all output file names\n\
- -O [X|XFEJPMRLSTBADCUVWQ](--outputtype) X - output flux, F - fluence, E - energy density\n\
+ -O [X|XFEJPMRLSTBCADUVWQ](--outputtype) X - output flux, F - fluence, E - energy density\n\
                                J - Jacobian (replay mode),   P - scattering\n\
                                event counts at each voxel (replay mode only)\n\
                                M - momentum transfer; R - RF/FD mua Jacobian\n\
                                L - total pathlength; S - RF/FD mus Jacobian\n\
                                T - time-of-flight*nscat; B - time-of-flight*path\n\
+                               C - fluorescence replay clone (replay mode)\n\
                                A - adjoint mua Jacobian (needs detpos+detdir)\n\
                                D - adjoint D-coeff Jacobian (needs detpos+dir)\n\
                                U - adjoint mus Jacobian (grad*grad*3*D^2*(1-g))\n\

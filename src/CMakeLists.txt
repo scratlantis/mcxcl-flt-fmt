@@ -132,7 +132,7 @@ if (BUILD_PYTHON)
             cjson/cJSON.h
             pmcxcl.cpp
             )
-    target_compile_definitions(_pmcxcl PUBLIC MCX_CONTAINER PYBIND11_VERSION_MAJOR)
+    target_compile_definitions(_pmcxcl PUBLIC MCX_CONTAINER MCX_EMBED_CL PYBIND11_VERSION_MAJOR)
 
     target_link_libraries(_pmcxcl pybind11::module pybind11::lto pybind11::windows_extras OpenCL::OpenCL zmat)
 

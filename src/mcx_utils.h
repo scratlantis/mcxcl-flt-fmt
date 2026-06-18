@@ -55,7 +55,7 @@
 #define NII_HEADER_SIZE 352
 #define GL_RGBA32F 0x8814
 
-enum TOutputType {otFlux, otFluence, otEnergy, otJacobian, otWP, otDCS, otRF, otL, otRFmus, otWLTOF, otWPTOF, otAdjoint,
+enum TOutputType {otFlux, otFluence, otEnergy, otJacobian, otWP, otDCS, otRF, otL, otRFmus, otWLTOF, otWPTOF, otFluoReplay, otAdjoint,
                   otAdjointDcoeff, otAdjointMus, otAdjointMusp, otAdjointMuaD, otAdjointMuaMusp
                  };   /**< types of output */
 #define MCX_IS_ADJOINT_TYPE(t)      ((int)(t) >= (int)otAdjoint)      /**< true for all adjoint-family output types */
@@ -192,6 +192,8 @@ typedef struct MCXConfig {
     float4* detpos;               /**<detector positions and radius, overwrite detradius*/
     float4* detdir;               /**<detector normal direction and focal length (for adjoint output type)*/
     float4* smatrix;              /**<scattering Mueller matrix */
+    float* muaf;                  /**<per-voxel fluorescence/emission absorption coefficient */
+    float* muf;                   /**<per-voxel fluorophore coefficient */
 
     unsigned int maxgate;         /**<simultaneous recording gates*/
     int respin;                   /**<number of repeatitions (if positive), or number of divisions (if negative)*/

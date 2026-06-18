@@ -25,3 +25,15 @@
 [done] * port photon sharing from mcx to mcxcl [2019/3/2, FangQ]
 [done] * port trajectory data output from mcx to mcxcl [2019/3/2, FangQ]
 [done] * port new detected photon output data format from mcx to mcxcl [2019/3/2, FangQ]
+
+
+[new] * fluorescent replay v1:
+1st pass)
+trace photons, accumulate quantities
+- A) excitation absorbtion weight
+- B) fluorescent absorbtion weight
+- C) fluorescent flux
+
+these are accumulated as follows:
+- A) microscopic beer lampert (as already implemeted), accumulate along path
+- B) microscopic beer lampert (as already implemeted), same but use flurescence absorbtion coefficient instead
