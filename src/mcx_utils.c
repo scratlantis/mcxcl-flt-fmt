@@ -301,6 +301,7 @@ void mcx_initcfg(Config* cfg) {
     cfg->replay.weight = NULL;
     cfg->replay.tof = NULL;
     cfg->replay.detid = NULL;
+    cfg->replay.fluoweight = NULL;
     cfg->replaydet = 0;
     cfg->seedfile[0] = '\0';
 
@@ -419,6 +420,10 @@ void mcx_clearcfg(Config* cfg) {
 
     if (cfg->replay.detid) {
         free(cfg->replay.detid);
+    }
+
+    if (cfg->replay.fluoweight) {
+        free(cfg->replay.fluoweight);
     }
 
     if (cfg->muaf) {
@@ -1897,7 +1902,7 @@ void mcx_validatecfg(Config* cfg, float* detps, int dimdetps[2], int seedbyte) {
         }
     }
 
-    if ((cfg->outputtype == otJacobian || cfg->outputtype == otWP || cfg->outputtype == otDCS || cfg->outputtype == otRF || cfg->outputtype == otRFmus || cfg->outputtype == otWLTOF || cfg->outputtype == otWPTOF || cfg->outputtype == otFluoReplay)
+    if ((cfg->outputtype == otJacobian || cfg->outputtype == otWP || cfg->outputtype == otDCS || cfg->outputtype == otRF || cfg->outputtype == otRFmus || cfg->outputtype == otWLTOF || cfg->outputtype == otWPTOF)
             && cfg->seed != SEED_FROM_FILE) {
         MCX_ERROR(-6, "Jacobian output is only valid in the reply mode. Please define cfg.seed");
     }
@@ -5167,7 +5172,7 @@ void mcx_parsecmd(int argc, char* argv[], Config* cfg) {
         exit(0);
     }
 
-    if ((cfg->outputtype == otJacobian || cfg->outputtype == otWP || cfg->outputtype == otDCS || cfg->outputtype == otRF || cfg->outputtype == otRFmus || cfg->outputtype == otWLTOF || cfg->outputtype == otWPTOF || cfg->outputtype == otFluoReplay) && cfg->seed != SEED_FROM_FILE) {
+    if ((cfg->outputtype == otJacobian || cfg->outputtype == otWP || cfg->outputtype == otDCS || cfg->outputtype == otRF || cfg->outputtype == otRFmus || cfg->outputtype == otWLTOF || cfg->outputtype == otWPTOF) && cfg->seed != SEED_FROM_FILE) {
         MCX_ERROR(-1, T_("Jacobian output is only valid in the reply mode. Please give an mch file after '-E'."));
     }
 

@@ -1356,6 +1356,15 @@ py::dict pmcxcl_interface(const py::dict& user_cfg) {
 
             free(mcx_config.exportdetected);
             mcx_config.exportdetected = NULL;
+
+            if (mcx_config.replay.fluoweight && mcx_config.detectedcount > 0) {
+                auto fluoweight = py::array_t<float>(mcx_config.detectedcount);
+                memcpy(fluoweight.mutable_data(), mcx_config.replay.fluoweight,
+                       mcx_config.detectedcount * sizeof(float));
+                output["fluoweight"] = fluoweight;
+                free(mcx_config.replay.fluoweight);
+                mcx_config.replay.fluoweight = NULL;
+            }
         }
 
         if (mcx_config.issave2pt) {

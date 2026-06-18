@@ -138,6 +138,7 @@ typedef struct PhotonReplay {
     void*  seed;                  /**< pointer to the seeds of the replayed photon */
     float* weight;                /**< pointer to the detected photon weight array */
     float* tof;                   /**< pointer to the detected photon time-of-fly array */
+    float* fluoweight;            /**< per-detected-photon total muaf absorption weight for fluorescence replay */
 } Replay;
 
 typedef struct MCXGPUInfo {

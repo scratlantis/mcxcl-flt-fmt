@@ -471,7 +471,7 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
     cl_uint  devid = 0;
     cl_mem* gmedia = NULL, *gproperty = NULL, *gparam = NULL;
     cl_mem* gsmatrix = NULL, *gmuaf = NULL, *gmuf = NULL;
-    cl_mem greplaydetid = NULL, greplayw = NULL, greplaytof = NULL, *gsrcpattern = NULL;
+    cl_mem greplaydetid = NULL, greplayw = NULL, greplaytof = NULL, gfluoweight = NULL, *gsrcpattern = NULL;
     cl_mem* gfield = NULL, *gdetphoton = NULL, *gseed = NULL, *genergy = NULL, *gseeddata = NULL;
     cl_mem* gprogress = NULL, *gdetected = NULL, *gdetpos = NULL, *gjumpdebug = NULL, *gdebugdata = NULL, *ginvcdf = NULL, *gangleinvcdf = NULL;
 
@@ -741,6 +741,12 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
             if (cfg->replay.detid) {
                 OCL_TRY(((greplaydetid = clCreateBuffer(mcxcontext, RO_MEM, sizeof(int) * cfg->nphoton, cfg->replay.detid, &status), status)));
             }
+
+            if (cfg->outputtype == otFluoReplay && cfg->replay.fluoweight) {
+                OCL_TRY(((gfluoweight = clCreateBuffer(mcxcontext, RO_MEM, sizeof(float) * cfg->nphoton, cfg->replay.fluoweight, &status), status)));
+            }
+        } else if (cfg->outputtype == otFluoReplay && cfg->muaf) {
+            OCL_TRY(((gfluoweight = clCreateBuffer(mcxcontext, CL_MEM_READ_WRITE, sizeof(float) * cfg->maxdetphoton, NULL, &status), status)));
         }
 
         for (i = 0; i < workdev; i++) {
@@ -927,6 +933,14 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
             snprintf(opt + strlen(opt), MAX_JIT_OPT_LEN - strlen(opt), "%s ", "-DMCX_ADJOINT_MODE");
         }
 
+        if (cfg->muaf) {
+            snprintf(opt + strlen(opt), MAX_JIT_OPT_LEN - strlen(opt), "%s ", "-DHAS_MUAF");
+        }
+
+        if (cfg->muf) {
+            snprintf(opt + strlen(opt), MAX_JIT_OPT_LEN - strlen(opt), "%s ", "-DHAS_MUF");
+        }
+
         if (strstr(opt, "USE_MACRO_CONST")) {
             UPARAM_TO_MACRO(opt, param, detnum);
             UPARAM_TO_MACRO(opt, param, doreflect);
@@ -1068,6 +1082,8 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
             cl_mem null_muf = NULL;
             OCL_ASSERT((clSetKernelArg(mcxkernel[i], 20, sizeof(cl_mem), (cfg->muaf ? (void*)(gmuaf + i) : (void*)(&null_muaf)))));
             OCL_ASSERT((clSetKernelArg(mcxkernel[i], 21, sizeof(cl_mem), (cfg->muf ? (void*)(gmuf + i) : (void*)(&null_muf)))));
+            cl_mem null_fluoweight = NULL;
+            OCL_ASSERT((clSetKernelArg(mcxkernel[i], 22, sizeof(cl_mem), (gfluoweight ? (void*)(&gfluoweight) : (void*)(&null_fluoweight)))));
         }
 
         if (status != CL_SUCCESS) {
@@ -1135,7 +1151,7 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
                     param.blockphoton = (int)(cfg->nphoton * cfg->workload[devid] / (fullload * nblock * cfg->respin));
                     param.blockextra  = (int)(cfg->nphoton * cfg->workload[devid] / (fullload * cfg->respin) - param.blockphoton * nblock);
                     OCL_ASSERT((clEnqueueWriteBuffer(mcxqueue[devid], gparam[devid], CL_TRUE, 0, sizeof(MCXParam), &param, 0, NULL, NULL)));
-                    OCL_ASSERT((clSetKernelArg(mcxkernel[devid], 22, sizeof(cl_mem), (void*)(gparam + devid))));
+                    OCL_ASSERT((clSetKernelArg(mcxkernel[devid], 23, sizeof(cl_mem), (void*)(gparam + devid))));
 
                     // launch mcxkernel
                     OCL_ASSERT((clEnqueueNDRangeKernel(mcxqueue[devid], mcxkernel[devid], 1, NULL, &gpu[devid].autothread, &gpu[devid].autoblock, 0, NULL, &waittoread[devid])));
@@ -1265,6 +1281,12 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
 
                         if (cfg->issaveseed) {
                             free(seeddata);
+                        }
+
+                        if (gfluoweight && cfg->seed != SEED_FROM_FILE && cfg->outputtype == otFluoReplay) {
+                            cfg->replay.fluoweight = (float*)realloc(cfg->replay.fluoweight, detected * sizeof(float));
+                            OCL_ASSERT(clEnqueueReadBuffer(mcxqueue[devid], gfluoweight, CL_TRUE, 0,
+                                                           sizeof(float) * detected, cfg->replay.fluoweight, 0, NULL, NULL));
                         }
                     }
 
@@ -1758,6 +1780,10 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
 
         if (greplaydetid) {
             clReleaseMemObject(greplaydetid);
+        }
+
+        if (gfluoweight) {
+            clReleaseMemObject(gfluoweight);
         }
     }
 

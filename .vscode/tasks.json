@@ -456,29 +456,19 @@
       "problemMatcher": []
     },
     {
-      "label": "MCX fluo replay: visualize buffers",
+      "label": "MCX fluo replay: run experiment",
       "type": "shell",
-      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "command": "python",
       "args": [
-        "run_fluo_replay_path.py",
-        "--photons",
-        "1000000",
-        "--min-detected",
-        "1"
+        "run_fluo_replay_path.py"
       ],
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
         "env": {
           "PYTHONPATH": "${workspaceFolder}/pmcxcl",
-          "TMPDIR": "/tmp/pocl-temp",
-          "POCL_CACHE_DIR": "/tmp/pocl-cache",
           "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
         }
       },
-      "dependsOrder": "sequence",
-      "dependsOn": [
-        "MCX fluo replay: build pmcxcl"
-      ],
       "problemMatcher": [],
       "group": "build"
     },
