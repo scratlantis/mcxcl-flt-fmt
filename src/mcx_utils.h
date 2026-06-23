@@ -195,6 +195,7 @@ typedef struct MCXConfig {
     float4* smatrix;              /**<scattering Mueller matrix */
     float* muaf;                  /**<per-voxel fluorescence/emission absorption coefficient */
     float* muf;                   /**<per-voxel fluorophore coefficient */
+    float* prop_muaf;             /**<per-medium fluorescence/emission absorption coefficient (length = medianum) */
 
     unsigned int maxgate;         /**<simultaneous recording gates*/
     int respin;                   /**<number of repeatitions (if positive), or number of divisions (if negative)*/

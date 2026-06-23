@@ -776,7 +776,7 @@ __device__ int launchnewphoton(float4* p, float4* v, Stokes* s, float4* f, short
                                __local int* blockphoton, volatile __global uint* gprogress,
                                __local RandType* photonseed, __global RandType* gseeddata,
                                __global uint* gjumpdebug, __global float* gdebugdata, __local RandType* sharedmem, MCXsp* nuvox,
-                               __global float* photontof, __global float* gfluoweight, float* log_muaf_acc);
+                               __global float* photontof, __global float* gfluoweight, float* fluoflux_acc, float* log_em_trans_acc);
 
 __device__ void savedebugdata(float4* p, uint id, __global uint* gjumpdebug, __global float* gdebugdata, __constant MCXParam* gcfg, int srcid);
 
@@ -1481,7 +1481,7 @@ __device__ int launchnewphoton(float4* p, float4* v, Stokes* s, float4* f, short
                                __local RandType* photonseed, __global RandType* gseeddata,
                                __global uint* gjumpdebug, __global float* gdebugdata, __local RandType* sharedmem,
                                MCXsp* nuvox, __global float* photontof,
-                               __global float* gfluoweight, float* log_muaf_acc) {
+                               __global float* gfluoweight, float* fluoflux_acc, float* log_em_trans_acc) {
 
     *w0 = 1.f;
     *Lmove = -1.f;
@@ -1568,7 +1568,7 @@ __device__ int launchnewphoton(float4* p, float4* v, Stokes* s, float4* f, short
 #endif
                                               ) && (bool)(GPU_PARAM(gcfg, issaveref) < 2)) {
             savedetphoton(n_det, dpnum, ppath, p, v, s, photonseed, gseeddata, gdetpos, gcfg, isdet,
-                          gfluoweight, (log_muaf_acc != 0) ? native_exp(-(*log_muaf_acc)) : 0.f);
+                          gfluoweight, (fluoflux_acc != 0) ? *fluoflux_acc : 0.f);
         }
 
 #endif
@@ -1637,7 +1637,8 @@ __device__ int launchnewphoton(float4* p, float4* v, Stokes* s, float4* f, short
         p[0] = launchsrc->pos;
         v[0] = launchsrc->dir;
         f[0] = FLOAT4(0.f, 0.f, GPU_PARAM(gcfg, minaccumtime), f[0].w);
-        if (log_muaf_acc != 0) { *log_muaf_acc = 0.f; }
+        if (fluoflux_acc != 0) { *fluoflux_acc = 0.f; }
+        if (log_em_trans_acc != 0) { *log_em_trans_acc = 0.f; }
         *idx1d = AS_UINT(launchsrc->param2.z);
         *mediaid = AS_UINT(launchsrc->param2.w);
 
@@ -2347,7 +2348,8 @@ __kernel void mcx_main_loop(
     uint   mediaidold = 0;
     uint   isdet = 0;
     float  w0, Lmove, pathlen = 0.f;
-    float  log_muaf_acc = 0.f;
+    float  fluoflux_acc = 0.f;
+    float  log_em_trans_acc = 0.f;
     float  w_re = 0.f, w_im = 0.f, w0_re = 0.f, w0_im = 0.f; /**< complex photon weight for RF forward mode */
     MCXsp nuvox;
     nuvox.sv = 0;
@@ -2429,7 +2431,7 @@ __kernel void mcx_main_loop(
     if (LAUNCHNEWPHOTON(&p, &v, &s, &f, &flipdir, &prop, &idx1d, field, &mediaid, &w0, &Lmove, 0, ppath,
                         n_det, detectedphoton, t, (__global RandType*)n_seed, gproperty, media, srcpattern, gdetpos, gcfg, idx, blockphoton,
                         gprogress, (__local RandType*)((__local char*)sharedmem + sizeof(float) * (GPU_PARAM(gcfg, nphaselen) + GPU_PARAM(gcfg, nanglelen)) + get_local_id(0)*GPU_PARAM(gcfg, issaveseed)*RAND_BUF_LEN * sizeof(RandType)),
-                        gseeddata, gjumpdebug, gdebugdata, sharedmem, &nuvox, photontof, gfluoweight, &log_muaf_acc)) {
+                        gseeddata, gjumpdebug, gdebugdata, sharedmem, &nuvox, photontof, gfluoweight, &fluoflux_acc, &log_em_trans_acc)) {
         n_seed[idx] = NO_LAUNCH;
         return;
     }
@@ -2775,8 +2777,12 @@ __kernel void mcx_main_loop(
         }
 
 #ifdef HAS_MUAF
-        if ((GPU_PARAM(gcfg, outputtype) == otFluoReplay) & (GPU_PARAM(gcfg, seed) != SEED_FROM_FILE) & (mediaid > 0)) {
-            log_muaf_acc += gmuaf[idx1d] * f.z;
+        if ((GPU_PARAM(gcfg, outputtype) == otFluoReplay) & (mediaid > 0)) {
+            if (GPU_PARAM(gcfg, seed) != SEED_FROM_FILE) {
+                fluoflux_acc = (fluoflux_acc + gmuf[idx1d] * w0 * f.z) * native_exp(-gmuaf[idx1d] * f.z);
+            } else {
+                log_em_trans_acc += gmuaf[idx1d] * f.z;
+            }
         }
 #endif
 
@@ -2866,11 +2872,9 @@ __kernel void mcx_main_loop(
                         weight = replayweight[(idx * gcfg->threadphoton + min(idx, gcfg->oddphoton - 1) + (int)f.w) - 1] * pathlen;
 
                         if (GPU_PARAM(gcfg, outputtype) == otFluoReplay) {
-                            volatile __global float* vmuaf = gmuaf;
-                            volatile __global float* vmuf = gmuf;
-                            float muaf = (vmuaf != 0) ? vmuaf[idx1dold] : 0.f;
-                            float muf = (vmuf != 0) ? vmuf[idx1dold] : 0.f;
-                            weight += 0.f * (muaf + muf);
+                            uint pi = (idx * gcfg->threadphoton + min(idx, gcfg->oddphoton - 1) + (int)f.w) - 1;
+                            float log_em_pre = log_em_trans_acc - gmuaf[idx1dold] * pathlen;
+                            weight = w0 * pathlen * native_exp(log_em_pre - ((ulong)gfluoweight != 0UL ? gfluoweight[pi] : 0.f));
                         }
 
                         tshift = (idx * gcfg->threadphoton + min(idx, gcfg->oddphoton - 1) + (int)f.w - 1);
@@ -3028,7 +3032,7 @@ __kernel void mcx_main_loop(
                                 (((idx1d == OUTSIDE_VOLUME_MAX && gcfg->bc[9 + flipdir.w]) || (idx1d == OUTSIDE_VOLUME_MIN && gcfg->bc[6 + flipdir.w])) ? OUTSIDE_VOLUME_MIN : (mediaidold & DET_MASK)),
                                 ppath, n_det, detectedphoton, t, (__global RandType*)n_seed, gproperty, media, srcpattern, gdetpos, gcfg, idx, blockphoton, gprogress,
                                 (__local RandType*)((__local char*)sharedmem + sizeof(float) * (GPU_PARAM(gcfg, nphaselen) + GPU_PARAM(gcfg, nanglelen))
-                                                    + get_local_id(0)*GPU_PARAM(gcfg, issaveseed)*RAND_BUF_LEN * sizeof(RandType)), gseeddata, gjumpdebug, gdebugdata, sharedmem, &nuvox, photontof, gfluoweight, &log_muaf_acc)) {
+                                                    + get_local_id(0)*GPU_PARAM(gcfg, issaveseed)*RAND_BUF_LEN * sizeof(RandType)), gseeddata, gjumpdebug, gdebugdata, sharedmem, &nuvox, photontof, gfluoweight, &fluoflux_acc, &log_em_trans_acc)) {
                 break;
             }
 
@@ -3071,7 +3075,7 @@ __kernel void mcx_main_loop(
                 if (LAUNCHNEWPHOTON(&p, &v, &s, &f, &flipdir, &prop, &idx1d, field, &mediaid, &w0, &Lmove,
                                     (mediaidold & DET_MASK), ppath, n_det, detectedphoton, t, (__global RandType*)n_seed, gproperty, media, srcpattern, gdetpos, gcfg, idx, blockphoton, gprogress,
                                     (__local RandType*)((__local char*)sharedmem + sizeof(float) * (GPU_PARAM(gcfg, nphaselen) + GPU_PARAM(gcfg, nanglelen))
-                                                        + get_local_id(0)*GPU_PARAM(gcfg, issaveseed)*RAND_BUF_LEN * sizeof(RandType)), gseeddata, gjumpdebug, gdebugdata, sharedmem, &nuvox, photontof, gfluoweight, &log_muaf_acc)) {
+                                                        + get_local_id(0)*GPU_PARAM(gcfg, issaveseed)*RAND_BUF_LEN * sizeof(RandType)), gseeddata, gjumpdebug, gdebugdata, sharedmem, &nuvox, photontof, gfluoweight, &fluoflux_acc, &log_em_trans_acc)) {
                     break;
                 }
 
@@ -3114,7 +3118,7 @@ __kernel void mcx_main_loop(
                                                 gproperty, media, srcpattern, gdetpos, gcfg, idx, blockphoton, gprogress,
                                                 (__local RandType*)((__local char*)sharedmem + sizeof(float) * (GPU_PARAM(gcfg, nphaselen) + GPU_PARAM(gcfg, nanglelen)) +
                                                                     get_local_id(0)*GPU_PARAM(gcfg, issaveseed)*RAND_BUF_LEN * sizeof(RandType)),
-                                                gseeddata, gjumpdebug, gdebugdata, sharedmem, &nuvox, photontof, gfluoweight, &log_muaf_acc)) {
+                                                gseeddata, gjumpdebug, gdebugdata, sharedmem, &nuvox, photontof, gfluoweight, &fluoflux_acc, &log_em_trans_acc)) {
                                 break;
                             }
 
@@ -3208,7 +3212,7 @@ __kernel void mcx_main_loop(
                                                 (((idx1d == OUTSIDE_VOLUME_MAX && gcfg->bc[9 + flipdir.w]) || (idx1d == OUTSIDE_VOLUME_MIN && gcfg->bc[6 + flipdir.w])) ? OUTSIDE_VOLUME_MIN : (mediaidold & DET_MASK)),
                                                 ppath, n_det, detectedphoton, t, (__global RandType*)n_seed, gproperty, media, srcpattern, gdetpos, gcfg, idx, blockphoton, gprogress,
                                                 (__local RandType*)((__local char*)sharedmem + sizeof(float) * (GPU_PARAM(gcfg, nphaselen) + GPU_PARAM(gcfg, nanglelen))
-                                                                    + get_local_id(0)*GPU_PARAM(gcfg, issaveseed)*RAND_BUF_LEN * sizeof(RandType)), gseeddata, gjumpdebug, gdebugdata, sharedmem, &nuvox, photontof, gfluoweight, &log_muaf_acc)) {
+                                                                    + get_local_id(0)*GPU_PARAM(gcfg, issaveseed)*RAND_BUF_LEN * sizeof(RandType)), gseeddata, gjumpdebug, gdebugdata, sharedmem, &nuvox, photontof, gfluoweight, &fluoflux_acc, &log_em_trans_acc)) {
                                 break;
                             }
 
@@ -3253,7 +3257,7 @@ __kernel void mcx_main_loop(
                                                     gproperty, media, srcpattern, gdetpos, gcfg, idx, blockphoton, gprogress,
                                                     (__local RandType*)((__local char*)sharedmem + sizeof(float) * (GPU_PARAM(gcfg, nphaselen) + GPU_PARAM(gcfg, nanglelen)) +
                                                                         get_local_id(0)*GPU_PARAM(gcfg, issaveseed)*RAND_BUF_LEN * sizeof(RandType)),
-                                                    gseeddata, gjumpdebug, gdebugdata, sharedmem, &nuvox, photontof, gfluoweight, &log_muaf_acc)) {
+                                                    gseeddata, gjumpdebug, gdebugdata, sharedmem, &nuvox, photontof, gfluoweight, &fluoflux_acc, &log_em_trans_acc)) {
                                     break;
                                 }
 

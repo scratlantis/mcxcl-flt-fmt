@@ -507,6 +507,25 @@ void parse_config(const py::dict& user_cfg, Config& mcx_config) {
     parseFluorescenceVolume(user_cfg, mcx_config, "muaf", &mcx_config.muaf);
     parseFluorescenceVolume(user_cfg, mcx_config, "muf", &mcx_config.muf);
 
+    if (user_cfg.contains("prop_muaf")) {
+        auto arr = py::array_t<float, py::array::f_style | py::array::forcecast>::ensure(user_cfg["prop_muaf"]);
+        if (!arr) {
+            throw py::value_error("Invalid prop_muaf field value");
+        }
+        auto buf = arr.request();
+        if (buf.ndim != 1) {
+            throw py::value_error("prop_muaf must be a 1-D float array of length medianum");
+        }
+        if (mcx_config.prop_muaf) {
+            free(mcx_config.prop_muaf);
+        }
+        mcx_config.prop_muaf = static_cast<float*>(malloc(buf.size * sizeof(float)));
+        if (!mcx_config.prop_muaf) {
+            throw std::bad_alloc();
+        }
+        memcpy(mcx_config.prop_muaf, buf.ptr, buf.size * sizeof(float));
+    }
+
     if (user_cfg.contains("srcpos")) {
         auto f_style_volume = py::array_t < float, py::array::f_style | py::array::forcecast >::ensure(user_cfg["srcpos"]);
 

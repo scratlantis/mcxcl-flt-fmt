@@ -240,6 +240,7 @@ void mcx_initcfg(Config* cfg) {
     cfg->srcpattern = NULL;
     cfg->muaf = NULL;
     cfg->muf = NULL;
+    cfg->prop_muaf = NULL;
     cfg->session[0] = '\0';
     cfg->printnum = 0;
     cfg->minenergy = 0.f;
@@ -424,6 +425,10 @@ void mcx_clearcfg(Config* cfg) {
 
     if (cfg->replay.fluoweight) {
         free(cfg->replay.fluoweight);
+    }
+
+    if (cfg->prop_muaf) {
+        free(cfg->prop_muaf);
     }
 
     if (cfg->muaf) {
@@ -1398,6 +1403,10 @@ void mcx_replayinit(Config* cfg, float* detps, int dimdetps[2], int seedbyte) {
     cfg->replay.tof = (float*) calloc(cfg->nphoton, sizeof(float));
     cfg->replay.detid = (int*) calloc(cfg->nphoton, sizeof(int));
 
+    if (cfg->prop_muaf) {
+        cfg->replay.fluoweight = (float*) realloc(cfg->replay.fluoweight, cfg->nphoton * sizeof(float));
+    }
+
     cfg->nphoton = 0;
 
     for (i = 0; i < dimdetps[1]; i++) {
@@ -1413,9 +1422,18 @@ void mcx_replayinit(Config* cfg, float* detps, int dimdetps[2], int seedbyte) {
                 cfg->replay.tof[cfg->nphoton] = 0.f;
                 cfg->replay.detid[cfg->nphoton] = (hasdetid) ? (int) (detps[i * dimdetps[0]]) : 1;
 
+                if (cfg->prop_muaf) {
+                    cfg->replay.fluoweight[cfg->nphoton] = 0.f;
+                }
+
                 for (j = hasdetid; j < cfg->medianum - 1 + hasdetid; j++) {
                     plen = detps[i * dimdetps[0] + offset + j];
                     cfg->replay.weight[cfg->nphoton] *= expf(-cfg->prop[j - hasdetid + 1].mua * plen);
+
+                    if (cfg->prop_muaf) {
+                        cfg->replay.fluoweight[cfg->nphoton] += cfg->prop_muaf[j - hasdetid + 1] * plen;
+                    }
+
                     plen *= cfg->unitinmm;
                     cfg->replay.tof[cfg->nphoton] += plen * R_C0 * cfg->prop[j - hasdetid + 1].n;
                 }
@@ -1433,6 +1451,10 @@ void mcx_replayinit(Config* cfg, float* detps, int dimdetps[2], int seedbyte) {
     cfg->replay.weight = (float*) realloc(cfg->replay.weight, cfg->nphoton * sizeof(float));
     cfg->replay.tof = (float*) realloc(cfg->replay.tof, cfg->nphoton * sizeof(float));
     cfg->replay.detid = (int*) realloc(cfg->replay.detid, cfg->nphoton * sizeof(int));
+
+    if (cfg->prop_muaf) {
+        cfg->replay.fluoweight = (float*) realloc(cfg->replay.fluoweight, cfg->nphoton * sizeof(float));
+    }
 }
 
 /**
@@ -1449,6 +1471,10 @@ void mcx_replayprep(int* detid, float* ppath, History* his, Config* cfg) {
     float plen;
     cfg->nphoton = 0;
 
+    if (cfg->prop_muaf && !cfg->replay.fluoweight) {
+        cfg->replay.fluoweight = (float*)malloc(his->savedphoton * sizeof(float));
+    }
+
     for (i = 0; i < his->savedphoton; i++) {
         if (cfg->replaydet <= 0 || (detid && cfg->replaydet == (detid[i] & 0xFFFF))) {
             if (i != cfg->nphoton) {
@@ -1459,9 +1485,18 @@ void mcx_replayprep(int* detid, float* ppath, History* his, Config* cfg) {
             cfg->replay.tof[cfg->nphoton] = 0.f;
             cfg->replay.detid[cfg->nphoton] = (detid != NULL) ? detid[i] : 1;
 
+            if (cfg->prop_muaf) {
+                cfg->replay.fluoweight[cfg->nphoton] = 0.f;
+            }
+
             for (j = 0; j < his->maxmedia; j++) {
                 plen = ppath[i * his->maxmedia + j] * his->unitinmm;
                 cfg->replay.weight[cfg->nphoton] *= expf(-cfg->prop[j + 1].mua * plen);
+
+                if (cfg->prop_muaf) {
+                    cfg->replay.fluoweight[cfg->nphoton] += cfg->prop_muaf[j + 1] * plen;
+                }
+
                 cfg->replay.tof[cfg->nphoton] += plen * R_C0 * cfg->prop[j + 1].n;
             }
 
@@ -1477,6 +1512,10 @@ void mcx_replayprep(int* detid, float* ppath, History* his, Config* cfg) {
     cfg->replay.weight = (float*)realloc(cfg->replay.weight, cfg->nphoton * sizeof(float));
     cfg->replay.tof = (float*)realloc(cfg->replay.tof, cfg->nphoton * sizeof(float));
     cfg->replay.detid = (int*)realloc(cfg->replay.detid, cfg->nphoton * sizeof(int));
+
+    if (cfg->prop_muaf) {
+        cfg->replay.fluoweight = (float*)realloc(cfg->replay.fluoweight, cfg->nphoton * sizeof(float));
+    }
     cfg->minenergy = 0.f;
 }
 
@@ -3869,6 +3908,11 @@ void mcx_loadseedfile(Config* cfg) {
         cfg->replay.weight = (float*)malloc(his.savedphoton * sizeof(float));
         cfg->replay.tof = (float*)calloc(his.savedphoton, sizeof(float));
         cfg->replay.detid = (int*)calloc(his.savedphoton, sizeof(int));
+
+        if (cfg->prop_muaf) {
+            cfg->replay.fluoweight = (float*)realloc(cfg->replay.fluoweight, his.savedphoton * sizeof(float));
+        }
+
         fseek(fp, sizeof(his), SEEK_SET);
 
         if (fread(ppath, his.colcount * sizeof(float), his.savedphoton, fp) != his.savedphoton) {
@@ -3887,9 +3931,18 @@ void mcx_loadseedfile(Config* cfg) {
                 cfg->replay.tof[cfg->nphoton] = 0.f;
                 cfg->replay.detid[cfg->nphoton] = (hasdetid) ? (int)(ppath[i * his.colcount]) : 1;
 
+                if (cfg->prop_muaf) {
+                    cfg->replay.fluoweight[cfg->nphoton] = 0.f;
+                }
+
                 for (j = hasdetid; j < his.maxmedia + hasdetid; j++) {
                     plen = ppath[i * his.colcount + offset + j] * his.unitinmm;
                     cfg->replay.weight[cfg->nphoton] *= expf(-cfg->prop[j - hasdetid + 1].mua * plen);
+
+                    if (cfg->prop_muaf) {
+                        cfg->replay.fluoweight[cfg->nphoton] += cfg->prop_muaf[j - hasdetid + 1] * plen;
+                    }
+
                     cfg->replay.tof[cfg->nphoton] += plen * R_C0 * cfg->prop[j - hasdetid + 1].n;
                 }
 
@@ -3905,6 +3958,10 @@ void mcx_loadseedfile(Config* cfg) {
         cfg->replay.weight = (float*)realloc(cfg->replay.weight, cfg->nphoton * sizeof(float));
         cfg->replay.tof = (float*)realloc(cfg->replay.tof, cfg->nphoton * sizeof(float));
         cfg->replay.detid = (int*)realloc(cfg->replay.detid, cfg->nphoton * sizeof(int));
+
+        if (cfg->prop_muaf) {
+            cfg->replay.fluoweight = (float*)realloc(cfg->replay.fluoweight, cfg->nphoton * sizeof(float));
+        }
         cfg->minenergy = 0.f;
     }
 

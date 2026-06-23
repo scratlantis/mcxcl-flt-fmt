@@ -46,7 +46,6 @@
       ],
       "options": {
         "env": {
-          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
           "TMPDIR": "/tmp/pocl-temp",
           "POCL_CACHE_DIR": "/tmp/pocl-cache"
         }
@@ -259,7 +258,6 @@
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
         "env": {
-          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
           "TMPDIR": "/tmp/pocl-temp",
           "POCL_CACHE_DIR": "/tmp/pocl-cache"
         }
@@ -286,7 +284,6 @@
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
         "env": {
-          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
           "TMPDIR": "/tmp/pocl-temp",
           "POCL_CACHE_DIR": "/tmp/pocl-cache"
         }
@@ -313,7 +310,6 @@
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
         "env": {
-          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
           "TMPDIR": "/tmp/pocl-temp",
           "POCL_CACHE_DIR": "/tmp/pocl-cache"
         }
@@ -340,7 +336,6 @@
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
         "env": {
-          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
           "TMPDIR": "/tmp/pocl-temp",
           "POCL_CACHE_DIR": "/tmp/pocl-cache"
         }
@@ -367,7 +362,6 @@
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
         "env": {
-          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
           "TMPDIR": "/tmp/pocl-temp",
           "POCL_CACHE_DIR": "/tmp/pocl-cache"
         }
@@ -394,7 +388,6 @@
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
         "env": {
-          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
           "TMPDIR": "/tmp/pocl-temp",
           "POCL_CACHE_DIR": "/tmp/pocl-cache"
         }
@@ -421,7 +414,6 @@
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
         "env": {
-          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
           "TMPDIR": "/tmp/pocl-temp",
           "POCL_CACHE_DIR": "/tmp/pocl-cache"
         }
@@ -461,6 +453,23 @@
       "command": "python",
       "args": [
         "run_fluo_replay_path.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/pmcxcl",
+          "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
+        }
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "MCX fluo jacobian: test",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "run_fluo_jacobian.py"
       ],
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
@@ -563,7 +572,6 @@
           "MCX": "${workspaceFolder}/bin/mcxcl",
           "MCX_EXTRA_ARGS": "--atomic 0",
           "PHOTONS": "200000",
-          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
           "TMPDIR": "/tmp/pocl-temp",
           "POCL_CACHE_DIR": "/tmp/pocl-cache",
           "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
@@ -588,7 +596,6 @@
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
         "env": {
-          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
           "TMPDIR": "/tmp/pocl-temp",
           "POCL_CACHE_DIR": "/tmp/pocl-cache",
           "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
@@ -613,7 +620,6 @@
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
         "env": {
-          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
           "TMPDIR": "/tmp/pocl-temp",
           "POCL_CACHE_DIR": "/tmp/pocl-cache",
           "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
@@ -638,7 +644,6 @@
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
         "env": {
-          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
           "TMPDIR": "/tmp/pocl-temp",
           "POCL_CACHE_DIR": "/tmp/pocl-cache",
           "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
@@ -673,7 +678,6 @@
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
         "env": {
-          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
           "TMPDIR": "/tmp/pocl-temp",
           "POCL_CACHE_DIR": "/tmp/pocl-cache",
           "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
@@ -708,7 +712,6 @@
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
         "env": {
-          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
           "TMPDIR": "/tmp/pocl-temp",
           "POCL_CACHE_DIR": "/tmp/pocl-cache",
           "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
@@ -743,9 +746,77 @@
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
         "env": {
-          "OCL_ICD_VENDORS": "/etc/OpenCL/vendors/intel.icd",
           "TMPDIR": "/tmp/pocl-temp",
           "POCL_CACHE_DIR": "/tmp/pocl-cache",
+          "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
+        }
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "MCX fluo: compare two-field vs replay (500k)",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "run_fluo_comparison.py",
+        "--mua",  "0.01",
+        "--muaf", "0.02",
+        "--mus",  "10.0",
+        "--g",    "0.9",
+        "--muf-inclusion", "0.1",
+        "--photons", "500000"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/pmcxcl",
+          "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
+        }
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "MCX fluo: compare two-field vs replay (1M)",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "run_fluo_comparison.py",
+        "--mua",  "0.01",
+        "--muaf", "0.02",
+        "--mus",  "10.0",
+        "--g",    "0.9",
+        "--muf-inclusion", "0.1",
+        "--photons", "1000000"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/pmcxcl",
+          "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
+        }
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "MCX fluo: compare two-field vs replay (5M)",
+      "type": "shell",
+      "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
+      "args": [
+        "run_fluo_comparison.py",
+        "--mua",  "0.01",
+        "--muaf", "0.02",
+        "--mus",  "10.0",
+        "--g",    "0.9",
+        "--muf-inclusion", "0.1",
+        "--photons", "5000000"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/test/min_example",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/pmcxcl",
           "MPLCONFIGDIR": "${workspaceFolder}/test/min_example/.matplotlib"
         }
       },
