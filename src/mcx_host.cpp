@@ -1008,7 +1008,8 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
             snprintf(opt + strlen(opt), MAX_JIT_OPT_LEN - strlen(opt), " -DUSE_NVIDIA_GPU");
         } else if (cfg->isatomic && strstr(extensions, "cl_intel_global_float_atomics")) {
             snprintf(opt + strlen(opt), MAX_JIT_OPT_LEN - strlen(opt), " -DUSE_INTEL_FLOAT_ATOMIC");
-        } else if (cfg->isatomic && strstr(extensions, "cl_ext_float_atomics")) {
+        } else if (cfg->isatomic && gpu[0].vendor != dvIntel && gpu[0].vendor != dvIntelGPU &&
+                   strstr(extensions, "cl_ext_float_atomics")) {
             snprintf(opt + strlen(opt), MAX_JIT_OPT_LEN - strlen(opt), " -DUSE_OPENCL_FLOAT_ATOMIC");
         }
 

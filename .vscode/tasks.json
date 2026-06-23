@@ -822,6 +822,45 @@
       },
       "problemMatcher": [],
       "group": "build"
+    },
+    {
+      "label": "Digimouse: run atlas",
+      "type": "shell",
+      "command": "./run_atlas.sh",
+      "options": {
+        "cwd": "${workspaceFolder}/example/digimouse",
+        "env": {
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Digimouse: view output",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "view_atlas.py",
+        "digimouse.jnii"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/example/digimouse"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Digimouse: view atlas labels",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "view_atlas.py",
+        "digimouse.json"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/example/digimouse"
+      },
+      "problemMatcher": []
     }
   ]
 }
