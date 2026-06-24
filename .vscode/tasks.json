@@ -861,6 +861,39 @@
         "cwd": "${workspaceFolder}/example/digimouse"
       },
       "problemMatcher": []
+    },
+    {
+      "label": "Digimouse: prepare jacobian experiment",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "run_jacobian_experiment.py",
+        "--source-grid",
+        "3",
+        "3",
+        "--detector-grid",
+        "3",
+        "3",
+        "--medium-label",
+        "1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/example/digimouse"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Digimouse: view fluorescence truth",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "view_jacobian.py",
+        "jacobian_outputs/fluorescence_truth.npy"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/example/digimouse"
+      },
+      "problemMatcher": []
     }
   ]
 }
