@@ -663,7 +663,7 @@ typedef struct KernelParams {
 } MCXParam __attribute__ ((aligned (32)));
 
 enum TBoundary {bcUnknown, bcReflect, bcAbsorb, bcMirror, bcCyclic};
-enum TOutputType {otFlux, otFluence, otEnergy, otJacobian, otWP, otDCS, otRF, otL, otRFmus, otWLTOF, otWPTOF, otFluoReplay, otAdjoint,
+enum TOutputType {otFlux, otFluence, otEnergy, otJacobian, otWP, otDCS, otRF, otL, otRFmus, otWLTOF, otWPTOF, otFluoReplay, otFluenceSq, otAdjoint,
                   otAdjointDcoeff, otAdjointMus, otAdjointMusp, otAdjointMuaD, otAdjointMuaMusp
                  };
 #define MCX_IS_ADJOINT_TYPE(t)      ((int)(t) >= (int)otAdjoint)
@@ -2865,7 +2865,7 @@ __kernel void mcx_main_loop(
                     weight_im = (a_mag2_rf < EPS) ? (w0_im * pathlen) : (dw_im_rf * prop.x - dw_re_rf * a_im_rf) / a_mag2_rf;
                 } else if (GPU_PARAM(gcfg, outputtype) == otEnergy) {
                     weight = w0 - p.w;
-                } else if ((bool)(GPU_PARAM(gcfg, outputtype) == otFluence) || (bool)(GPU_PARAM(gcfg, outputtype) == otFlux) || MCX_IS_ADJOINT_TYPE(GPU_PARAM(gcfg, outputtype))) {
+                } else if ((bool)(GPU_PARAM(gcfg, outputtype) == otFluence) || (bool)(GPU_PARAM(gcfg, outputtype) == otFlux) || (bool)(GPU_PARAM(gcfg, outputtype) == otFluenceSq) || MCX_IS_ADJOINT_TYPE(GPU_PARAM(gcfg, outputtype))) {
                     weight = (prop.x < EPS) ? (w0 * pathlen) : ((w0 - p.w) / (prop.x));
                 } else if (GPU_PARAM(gcfg, seed) == SEED_FROM_FILE) {
                     if (GPU_PARAM(gcfg, outputtype) == otJacobian | GPU_PARAM(gcfg, outputtype) == otFluoReplay | GPU_PARAM(gcfg, outputtype) == otRF | GPU_PARAM(gcfg, outputtype) == otWLTOF) {
@@ -2899,7 +2899,8 @@ __kernel void mcx_main_loop(
 
                 if ((FABS(weight) > 0.f) | (GPU_PARAM(gcfg, outputtype) == otRF)) {
 #ifndef USE_ATOMIC
-                    field[idx1dold + tshift * gcfg->dimlen.z] += weight;
+                    float deposit = (GPU_PARAM(gcfg, outputtype) == otFluenceSq) ? weight * weight : weight;
+                    field[idx1dold + tshift * gcfg->dimlen.z] += deposit;
 
                     if ((GPU_PARAM(gcfg, omega) > 0.f) & (GPU_PARAM(gcfg, seed) != SEED_FROM_FILE)) {
                         field[idx1dold + tshift * gcfg->dimlen.z + gcfg->dimlen.w * 2] += weight_im;
@@ -2910,7 +2911,8 @@ __kernel void mcx_main_loop(
 
 #else
 #if !defined(MCX_SRC_PATTERN) && !defined(MCX_SRC_PATTERN3D)
-                    float oldval = atomicadd(field + idx1dold + tshift * gcfg->dimlen.z, weight);
+                    float deposit = (GPU_PARAM(gcfg, outputtype) == otFluenceSq) ? weight * weight : weight;
+                    float oldval = atomicadd(field + idx1dold + tshift * gcfg->dimlen.z, deposit);
 
                     if ((FABS(oldval) > MAX_ACCUM) & ((GPU_PARAM(gcfg, outputtype) != otRF) | ((GPU_PARAM(gcfg, omega) > 0.f) & (GPU_PARAM(gcfg, seed) != SEED_FROM_FILE)))) {
                         atomicadd(field + idx1dold + tshift * gcfg->dimlen.z, ((oldval > 0.f) ? -MAX_ACCUM : MAX_ACCUM));
@@ -2932,7 +2934,9 @@ __kernel void mcx_main_loop(
 
                     for (int i = 0; i < GPU_PARAM(gcfg, srcnum); i++) {
                         if (FABS(ppath[GPU_PARAM(gcfg, w0offset) + i]) > 0.f) {
-                            float oldval = atomicadd(field + (idx1dold + tshift * gcfg->dimlen.z) * GPU_PARAM(gcfg, srcnum) + i, ((GPU_PARAM(gcfg, srcnum) == 1) ? weight : weight * ppath[GPU_PARAM(gcfg, w0offset) + i]));
+                            float deposit = ((GPU_PARAM(gcfg, srcnum) == 1) ? weight : weight * ppath[GPU_PARAM(gcfg, w0offset) + i]);
+                            deposit = (GPU_PARAM(gcfg, outputtype) == otFluenceSq) ? deposit * deposit : deposit;
+                            float oldval = atomicadd(field + (idx1dold + tshift * gcfg->dimlen.z) * GPU_PARAM(gcfg, srcnum) + i, deposit);
 
                             if (FABS(oldval) > MAX_ACCUM) {
                                 atomicadd(field + (idx1dold + tshift * gcfg->dimlen.z) * GPU_PARAM(gcfg, srcnum) + i, ((oldval > 0.f) ? -MAX_ACCUM : MAX_ACCUM));

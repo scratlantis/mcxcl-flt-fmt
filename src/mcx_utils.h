@@ -55,7 +55,7 @@
 #define NII_HEADER_SIZE 352
 #define GL_RGBA32F 0x8814
 
-enum TOutputType {otFlux, otFluence, otEnergy, otJacobian, otWP, otDCS, otRF, otL, otRFmus, otWLTOF, otWPTOF, otFluoReplay, otAdjoint,
+enum TOutputType {otFlux, otFluence, otEnergy, otJacobian, otWP, otDCS, otRF, otL, otRFmus, otWLTOF, otWPTOF, otFluoReplay, otFluenceSq, otAdjoint,
                   otAdjointDcoeff, otAdjointMus, otAdjointMusp, otAdjointMuaD, otAdjointMuaMusp
                  };   /**< types of output */
 #define MCX_IS_ADJOINT_TYPE(t)      ((int)(t) >= (int)otAdjoint)      /**< true for all adjoint-family output types */

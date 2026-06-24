@@ -903,7 +903,7 @@ void parse_config(const py::dict& user_cfg, Config& mcx_config) {
 
     if (user_cfg.contains("outputtype")) {
         std::string output_type_str = py::str(user_cfg["outputtype"]);
-        const char* outputtype[] = {"flux", "fluence", "energy", "jacobian", "nscat", "wl", "wp", "wm", "rf", "length", "rfmus", "wltof", "wptof", "fluo", "adjoint",
+        const char* outputtype[] = {"flux", "fluence", "energy", "jacobian", "nscat", "wl", "wp", "wm", "rf", "length", "rfmus", "wltof", "wptof", "fluo", "fluence2", "adjoint",
                                     "adjoint_dcoeff", "adjoint_mus", "adjoint_musp", "adjoint_mua_d", "adjoint_mua_musp", nullptr
                                    };
         char outputstr[MAX_SESSION_LENGTH] = {'\0'};

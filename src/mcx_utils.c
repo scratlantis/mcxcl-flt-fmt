@@ -140,8 +140,8 @@ const char saveflag[] = {'D', 'S', 'P', 'M', 'X', 'V', 'W', 'I', '\0'};
  * p: scattering counts for computing Jacobians for mus
  */
 
-const char outputtype[] = {'x', 'f', 'e', 'j', 'p', 'm', 'r', 'l', 's', 't', 'b', 'c', 'a', 'd', 'u', 'v', 'w', 'q', '\0'};
-/*                          flux flnc enrg jcbn wp  dcs  rf  plen rfms wltof wptof fluo adj  D   mus  musp muad mamp */
+const char outputtype[] = {'x', 'f', 'e', 'j', 'p', 'm', 'r', 'l', 's', 't', 'b', 'c', 'k', 'a', 'd', 'u', 'v', 'w', 'q', '\0'};
+/*                          flux flnc enrg jcbn wp  dcs  rf  plen rfms wltof wptof fluo fln2 adj  D   mus  musp muad mamp */
 
 
 /**
@@ -699,7 +699,14 @@ void mcx_savebnii(float* vol, int ndim, uint* dims, float* voxelsize, char* name
     if (cfg->outputtype >= 0) {
         const char* typestr[] = {"MCX volumetric output: Fluence rate (W/mm^2)", "MCX volumetric output: Fluence (J/mm^2)",
                                  "MCX volumetric output: Voxel-wise energy deposit (J)", "MCX volumetric output: Jacobian for mua (J/mm)", "MCX volumetric output: Scattering count",
-                                 "MCX volumetric output: Partial momentum transfer"
+                                 "MCX volumetric output: Partial momentum transfer", "MCX volumetric output: RF mua Jacobian",
+                                 "MCX volumetric output: Total pathlength", "MCX volumetric output: RF mus Jacobian",
+                                 "MCX volumetric output: Time-of-flight weighted pathlength", "MCX volumetric output: Time-of-flight weighted scattering count",
+                                 "MCX volumetric output: Fluorescence replay", "MCX volumetric output: Sum of squared fluence contributions",
+                                 "MCX volumetric output: Adjoint mua Jacobian", "MCX volumetric output: Adjoint diffusion-coefficient Jacobian",
+                                 "MCX volumetric output: Adjoint mus Jacobian", "MCX volumetric output: Adjoint mus-prime Jacobian",
+                                 "MCX volumetric output: Dual adjoint mua and diffusion-coefficient Jacobians",
+                                 "MCX volumetric output: Dual adjoint mua and mus-prime Jacobians"
                                 };
         UBJ_WRITE_KEY(root, "Description", string, typestr[(int)cfg->outputtype]);
     } else {
@@ -835,7 +842,14 @@ void mcx_savejnii(float* vol, int ndim, uint* dims, float* voxelsize, char* name
     if (cfg->outputtype >= 0) {
         const char* typestr[] = {"MCX volumetric output: Fluence rate (W/mm^2)", "MCX volumetric output: Fluence (J/mm^2)",
                                  "MCX volumetric output: Voxel-wise energy deposit (J)", "MCX volumetric output: Jacobian for mua (J/mm)", "MCX volumetric output: Scattering count",
-                                 "MCX volumetric output: Partial momentum transfer"
+                                 "MCX volumetric output: Partial momentum transfer", "MCX volumetric output: RF mua Jacobian",
+                                 "MCX volumetric output: Total pathlength", "MCX volumetric output: RF mus Jacobian",
+                                 "MCX volumetric output: Time-of-flight weighted pathlength", "MCX volumetric output: Time-of-flight weighted scattering count",
+                                 "MCX volumetric output: Fluorescence replay", "MCX volumetric output: Sum of squared fluence contributions",
+                                 "MCX volumetric output: Adjoint mua Jacobian", "MCX volumetric output: Adjoint diffusion-coefficient Jacobian",
+                                 "MCX volumetric output: Adjoint mus Jacobian", "MCX volumetric output: Adjoint mus-prime Jacobian",
+                                 "MCX volumetric output: Dual adjoint mua and diffusion-coefficient Jacobians",
+                                 "MCX volumetric output: Dual adjoint mua and mus-prime Jacobians"
                                 };
         cJSON_AddStringToObject(hdr, "Description", typestr[(int)cfg->outputtype]);
     } else {
@@ -5606,13 +5620,14 @@ where possible parameters include (the first value in [*|*] is the default)\n\
 \n"S_BOLD S_CYAN"\
 == Output options ==\n"S_RESET"\
  -s sessionid  (--session)     a string to label all output file names\n\
- -O [X|XFEJPMRLSTBCADUVWQ](--outputtype) X - output flux, F - fluence, E - energy density\n\
+ -O [X|XFEJPMRLSTBCKADUVWQ](--outputtype) X - output flux, F - fluence, E - energy density\n\
                                J - Jacobian (replay mode),   P - scattering\n\
                                event counts at each voxel (replay mode only)\n\
                                M - momentum transfer; R - RF/FD mua Jacobian\n\
                                L - total pathlength; S - RF/FD mus Jacobian\n\
                                T - time-of-flight*nscat; B - time-of-flight*path\n\
                                C - fluorescence replay clone (replay mode)\n\
+                               K - sum of squared fluence contributions\n\
                                A - adjoint mua Jacobian (needs detpos+detdir)\n\
                                D - adjoint D-coeff Jacobian (needs detpos+dir)\n\
                                U - adjoint mus Jacobian (grad*grad*3*D^2*(1-g))\n\

@@ -1,0 +1,19 @@
+{
+  "config": "/home/sidney/repos/hiro/mcxcl-flt-fmt/example/digimouse/digimouse.json",
+  "mcx": "/home/sidney/repos/hiro/mcxcl-flt-fmt/bin/mcxcl",
+  "photons": 10000000,
+  "seed": 20260624,
+  "fluence_mc2": "/home/sidney/repos/hiro/mcxcl-flt-fmt/example/digimouse/fluence_moments/digimouse_fluence.mc2",
+  "moment2_mc2": "/home/sidney/repos/hiro/mcxcl-flt-fmt/example/digimouse/fluence_moments/digimouse_fluence_moment2.mc2",
+  "shape": [
+    190,
+    496,
+    104
+  ],
+  "relative_threshold": 1e-12,
+  "absolute_threshold": 7.4216054999999994e-06,
+  "valid_voxels": 959672,
+  "ratio_min": 1.099626558698219e-07,
+  "ratio_max": 1.0,
+  "ratio_voxels_above_one": 0
+}

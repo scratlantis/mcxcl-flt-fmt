@@ -1447,6 +1447,9 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
                 if (cfg->outputtype == otFluence || MCX_IS_ADJOINT_TYPE(cfg->outputtype)) {
                     scale[0] *= cfg->tstep;
                 }
+            } else if (cfg->outputtype == otFluenceSq) {
+                scale[0] = cfg->unitinmm / (cfg->energytot * Vvox);
+                scale[0] *= scale[0];
             } else if (cfg->outputtype == otEnergy || cfg->outputtype == otL) {
                 scale[0] = 1.f / cfg->energytot;
             } else if (cfg->outputtype == otJacobian || cfg->outputtype == otWP || cfg->outputtype == otDCS || cfg->outputtype == otRF || cfg->outputtype == otRFmus || cfg->outputtype == otWLTOF || cfg->outputtype == otWPTOF || cfg->outputtype == otFluoReplay) {

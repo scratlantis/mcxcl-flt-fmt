@@ -32,3 +32,21 @@ to open such in Python.
 [Fang2012] Fang Q and Kaeli D, "Accelerating mesh-based Monte Carlo method 
  on modern CPU architectures," Biomed. Opt. Express, 3(12), 3223-3230, 2012
 
+Fluence contribution moments
+----------------------------
+
+After rebuilding MCXCL, run a matched fluence and squared-contribution pair:
+
+  python3 run_fluence_moments.py --photons 10000000
+
+Both simulations use the same explicit RNG seed. The second pass uses output
+type K and accumulates the square of every track segment's fluence contribution
+before adding it to the voxel. Derived NumPy volumes are written under
+fluence_moments/, including:
+
+  fluence_contribution_ratio.npy       sum(c_i^2) / sum(c_i)^2
+  fluence_effective_contributions.npy  sum(c_i)^2 / sum(c_i^2)
+
+View the ratio with:
+
+  python3 view_jacobian.py fluence_moments/fluence_contribution_ratio.npy

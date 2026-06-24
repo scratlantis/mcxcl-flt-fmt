@@ -23,14 +23,22 @@ class NumpySliceViewer(tk.Tk):
         self.source_index = tk.IntVar(value=0)
         self.detector_index = tk.IntVar(value=0)
         self.autoscale = tk.BooleanVar(value=True)
-        self.log_scale = tk.BooleanVar(value=False)
+        default_log = any(token in path.stem.lower() for token in ("ratio", "moment", "fluence", "effective"))
+        self.log_scale = tk.BooleanVar(value=default_log)
+        self.s1_exponent = tk.DoubleVar(value=0.0)
+        self.s2_exponent = tk.DoubleVar(value=-1.0)
+        self.s1_text = tk.StringVar()
+        self.s2_text = tk.StringVar()
+        self.marked_text = tk.StringVar()
+        self.value_log_bounds = self._log_bounds()
         self.photo = None
 
         self.title(f"{path.name} - NumPy slice viewer")
-        self.geometry("940x760")
+        self.geometry("940x830")
         self._build_ui()
         self._configure_selectors()
         self._configure_slider()
+        self._configure_mark_sliders(reset=True)
         self._render()
 
     def _initial_volume(self) -> np.ndarray:
@@ -48,6 +56,15 @@ class NumpySliceViewer(tk.Tk):
         if self.data.ndim == 4:
             return self.data[self.detector_index.get()]
         return self.data[self.source_index.get(), self.detector_index.get()]
+
+    def _log_bounds(self) -> tuple[float, float]:
+        values = np.asarray(self.array)
+        positive = values[np.isfinite(values) & (values > 0)]
+        if not positive.size:
+            return -12.0, 0.0
+        lo = math.floor(math.log10(float(np.min(positive))))
+        hi = math.ceil(math.log10(float(np.max(positive))))
+        return float(lo), float(max(lo + 1.0, hi))
 
     def _build_ui(self) -> None:
         main = ttk.Frame(self, padding=8)
@@ -102,6 +119,19 @@ class NumpySliceViewer(tk.Tk):
         self.slider = ttk.Scale(main, orient="horizontal", command=self._slider_changed)
         self.slider.pack(fill="x", pady=(8, 4))
 
+        marks = ttk.Frame(main)
+        marks.pack(fill="x", pady=(4, 8))
+        ttk.Label(marks, textvariable=self.s1_text, width=17).grid(row=0, column=0, sticky="w")
+        self.s1_slider = ttk.Scale(marks, orient="horizontal", variable=self.s1_exponent, command=self._mark_changed)
+        self.s1_slider.grid(row=0, column=1, sticky="ew", padx=(6, 12))
+        ttk.Label(marks, textvariable=self.s2_text, width=17).grid(row=1, column=0, sticky="w")
+        self.s2_slider = ttk.Scale(marks, orient="horizontal", variable=self.s2_exponent, command=self._mark_changed)
+        self.s2_slider.grid(row=1, column=1, sticky="ew", padx=(6, 12))
+        ttk.Label(marks, textvariable=self.marked_text, width=22, anchor="e").grid(
+            row=0, column=2, rowspan=2, sticky="e"
+        )
+        marks.columnconfigure(1, weight=1)
+
         self.canvas = tk.Canvas(main, background="#151515", highlightthickness=0)
         self.canvas.pack(fill="both", expand=True)
         self.canvas.bind("<Configure>", lambda _event: self._render())
@@ -123,7 +153,9 @@ class NumpySliceViewer(tk.Tk):
 
     def _volume_changed(self) -> None:
         self.array = self._select_volume()
+        self.value_log_bounds = self._log_bounds()
         self._configure_slider()
+        self._configure_mark_sliders(reset=True)
         self._render()
 
     def _configure_slider(self) -> None:
@@ -136,6 +168,29 @@ class NumpySliceViewer(tk.Tk):
         self.index.set(int(float(value)))
         self._render()
 
+    def _configure_mark_sliders(self, reset: bool) -> None:
+        lo, hi = self.value_log_bounds
+        slider_lo = lo - 2.0
+        slider_hi = hi + 1.0
+        self.s1_slider.configure(from_=slider_lo, to=slider_hi)
+        self.s2_slider.configure(from_=slider_lo, to=slider_hi)
+        if reset:
+            self.s1_exponent.set((lo + hi) / 2.0)
+            self.s2_exponent.set(max(slider_lo, self.s1_exponent.get() - 1.0))
+        self._update_mark_labels()
+
+    def _mark_changed(self, _value: str = "") -> None:
+        self._update_mark_labels()
+        self._render()
+
+    def _mark_values(self) -> tuple[float, float]:
+        return 10.0 ** self.s1_exponent.get(), 10.0 ** self.s2_exponent.get()
+
+    def _update_mark_labels(self) -> None:
+        s1, s2 = self._mark_values()
+        self.s1_text.set(f"s1  {s1:.6g}")
+        self.s2_text.set(f"s2  {s2:.6g}")
+
     def _slice(self) -> tuple[np.ndarray, tuple[str, str]]:
         idx = self.index.get()
         if self.axis.get() == "x":
@@ -144,20 +199,21 @@ class NumpySliceViewer(tk.Tk):
             return self.array[:, idx, :].T, ("X", "Z")
         return self.array[:, :, idx].T, ("X", "Y")
 
-    def _to_grayscale(self, image: np.ndarray) -> bytes:
+    def _to_rgb(self, image: np.ndarray) -> tuple[bytes, int]:
         values = image.astype(np.float64, copy=False)
-        finite = np.isfinite(values)
-        if not np.any(finite):
-            return bytes(values.size)
+        raw_finite = np.isfinite(values)
+        if not np.any(raw_finite):
+            return bytes(values.size * 3), 0
         shown = values.copy()
+        display_finite = raw_finite.copy()
         if self.log_scale.get():
-            positive = finite & (shown > 0)
+            positive = raw_finite & (shown > 0)
             if not np.any(positive):
-                return bytes(values.size)
+                return bytes(values.size * 3), 0
             floor = float(np.min(shown[positive]))
             shown = np.log10(np.maximum(shown, floor))
-            finite = np.isfinite(shown)
-        vals = shown[finite]
+            display_finite = np.isfinite(shown)
+        vals = shown[display_finite]
         if self.autoscale.get():
             lo = float(np.percentile(vals, 1.0))
             hi = float(np.percentile(vals, 99.5))
@@ -167,22 +223,41 @@ class NumpySliceViewer(tk.Tk):
         if hi <= lo:
             hi = lo + 1.0
         scaled = np.clip((shown - lo) * (255.0 / (hi - lo)), 0, 255)
-        scaled[~finite] = 0
-        return scaled.astype(np.uint8).tobytes(order="C")
+        scaled[~display_finite] = 0
+        gray = scaled.astype(np.float64)
+        rgb = np.repeat(gray[..., None], 3, axis=2)
+
+        s1, s2 = self._mark_values()
+        distance = np.abs(values - s1)
+        marked = raw_finite & (distance < s2)
+        if np.any(marked):
+            closeness = np.clip(1.0 - distance[marked] / s2, 0.0, 1.0)
+            alpha = 0.3 + 0.7 * closeness
+            target = np.array([20.0, 90.0, 255.0])
+            rgb[marked] = rgb[marked] * (1.0 - alpha[:, None]) + target * alpha[:, None]
+
+        return np.clip(rgb, 0, 255).astype(np.uint8).tobytes(order="C"), int(np.count_nonzero(marked))
 
     def _photo_from_pixels(self, width: int, height: int, pixels: bytes) -> tk.PhotoImage:
         image = tk.PhotoImage(width=width, height=height)
         rows = []
         for y in range(height):
-            row = pixels[y * width : (y + 1) * width]
-            rows.append("{" + " ".join(f"#{v:02x}{v:02x}{v:02x}" for v in row) + "}")
+            row = pixels[y * width * 3 : (y + 1) * width * 3]
+            rows.append(
+                "{"
+                + " ".join(
+                    f"#{row[offset]:02x}{row[offset + 1]:02x}{row[offset + 2]:02x}"
+                    for offset in range(0, len(row), 3)
+                )
+                + "}"
+            )
         image.put(" ".join(rows), to=(0, 0, width, height))
         return image
 
     def _render(self) -> None:
         image, labels = self._slice()
         height, width = image.shape
-        pixels = self._to_grayscale(image)
+        pixels, marked_count = self._to_rgb(image)
         self.photo = self._photo_from_pixels(width, height, pixels)
 
         self.canvas.delete("all")
@@ -196,6 +271,7 @@ class NumpySliceViewer(tk.Tk):
         finite = image[np.isfinite(image)]
         min_value = float(np.min(finite)) if finite.size else math.nan
         max_value = float(np.max(finite)) if finite.size else math.nan
+        self.marked_text.set(f"Marked: {marked_count:,} / {image.size:,}")
         self.axes_info.configure(text=f"Horizontal: {labels[0]}   Vertical: {labels[1]}   Shape: {self.data.shape}")
         self.info.configure(
             text=(

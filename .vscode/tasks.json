@@ -894,6 +894,62 @@
         "cwd": "${workspaceFolder}/example/digimouse"
       },
       "problemMatcher": []
+    },
+    {
+      "label": "Digimouse: run fluence moments",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "run_fluence_moments.py",
+        "--photons",
+        "10000000"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/example/digimouse",
+        "env": {
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache"
+        }
+      },
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "MCXCL: build"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Digimouse: view fluence contribution ratio",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "view_jacobian.py",
+        "fluence_moments/fluence_contribution_ratio.npy"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/example/digimouse"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Digimouse: view Jacobian volume",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "view_jacobian.py",
+        "${input:jacobianVolume}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/example/digimouse"
+      },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "jacobianVolume",
+      "type": "promptString",
+      "description": "Path to a 3D, 4D, or 5D NumPy volume",
+      "default": "fluence_moments/fluence_contribution_ratio.npy"
     }
   ]
 }
