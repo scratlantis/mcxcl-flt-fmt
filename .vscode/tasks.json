@@ -760,12 +760,18 @@
       "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
       "args": [
         "run_fluo_comparison.py",
-        "--mua",  "0.01",
-        "--muaf", "0.02",
-        "--mus",  "10.0",
-        "--g",    "0.9",
-        "--muf-inclusion", "0.1",
-        "--photons", "500000"
+        "--mua",
+        "0.01",
+        "--muaf",
+        "0.02",
+        "--mus",
+        "10.0",
+        "--g",
+        "0.9",
+        "--muf-inclusion",
+        "0.1",
+        "--photons",
+        "500000"
       ],
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
@@ -783,12 +789,18 @@
       "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
       "args": [
         "run_fluo_comparison.py",
-        "--mua",  "0.01",
-        "--muaf", "0.02",
-        "--mus",  "10.0",
-        "--g",    "0.9",
-        "--muf-inclusion", "0.1",
-        "--photons", "1000000"
+        "--mua",
+        "0.01",
+        "--muaf",
+        "0.02",
+        "--mus",
+        "10.0",
+        "--g",
+        "0.9",
+        "--muf-inclusion",
+        "0.1",
+        "--photons",
+        "1000000"
       ],
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
@@ -806,12 +818,18 @@
       "command": "${workspaceFolder}/test/min_example/.venv/bin/python",
       "args": [
         "run_fluo_comparison.py",
-        "--mua",  "0.01",
-        "--muaf", "0.02",
-        "--mus",  "10.0",
-        "--g",    "0.9",
-        "--muf-inclusion", "0.1",
-        "--photons", "5000000"
+        "--mua",
+        "0.01",
+        "--muaf",
+        "0.02",
+        "--mus",
+        "10.0",
+        "--g",
+        "0.9",
+        "--muf-inclusion",
+        "0.1",
+        "--photons",
+        "5000000"
       ],
       "options": {
         "cwd": "${workspaceFolder}/test/min_example",
@@ -902,7 +920,7 @@
       "args": [
         "run_fluence_moments.py",
         "--photons",
-        "10000000"
+        "1000000"
       ],
       "options": {
         "cwd": "${workspaceFolder}/example/digimouse",
@@ -923,7 +941,70 @@
       "command": "python3",
       "args": [
         "view_jacobian.py",
-        "fluence_moments/fluence_contribution_ratio.npy"
+        "fluence_moments/fluence_contribution_ratio.npy",
+        "--weight-volume",
+        "fluence_moments/fluence.npy",
+        "--export-dir",
+        "fluence_moments/marked_source"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/example/digimouse"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Digimouse: run marked source flux",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "run_marked_source.py",
+        "--photons",
+        "1000000"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/example/digimouse",
+        "env": {
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache"
+        }
+      },
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "MCXCL: build"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Digimouse: run marked source flux (10M production)",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "run_marked_source.py",
+        "--photons",
+        "10000000"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/example/digimouse",
+        "env": {
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache"
+        }
+      },
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "MCXCL: build"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Digimouse: view marked source flux",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "view_jacobian.py",
+        "marked_source_output/secondary_scaled_fluence.npy",
+        "--reference-volume",
+        "fluence_moments/fluence.npy"
       ],
       "options": {
         "cwd": "${workspaceFolder}/example/digimouse"

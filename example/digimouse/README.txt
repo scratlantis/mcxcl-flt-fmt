@@ -49,4 +49,31 @@ fluence_moments/, including:
 
 View the ratio with:
 
-  python3 view_jacobian.py fluence_moments/fluence_contribution_ratio.npy
+  python3 view_jacobian.py fluence_moments/fluence_contribution_ratio.npy \
+    --weight-volume fluence_moments/fluence.npy
+
+Marked-volume flux pass
+-----------------------
+
+Set s1 and s2 in the viewer, then click "Export marked source". This writes a
+mask and a source volume whose voxel weights are the original local fluence:
+
+  fluence_moments/marked_source/marked_mask.npy
+  fluence_moments/marked_source/source_weights.npy
+
+Run the secondary flux simulation with:
+
+  python3 run_marked_source.py
+
+The default is 100,000 photons for a quick preview. Use 10 million photons for
+a lower-noise result:
+
+  python3 run_marked_source.py --photons 10000000
+
+The volumetric source selects marked voxels in proportion to their fluence,
+launches uniformly within each selected voxel in an isotropic direction, and
+uses unit photon weights. The runner writes both the normalized unit-source
+fluence and the relative field scaled by sum(source_weights):
+
+  marked_source_output/secondary_unit_fluence.npy
+  marked_source_output/secondary_scaled_fluence.npy

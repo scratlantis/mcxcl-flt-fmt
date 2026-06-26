@@ -183,7 +183,7 @@ const char boundarydetflag[] = {'0', '1', '\0'};
 
 const char* srctypeid[] = {"pencil", "isotropic", "cone", "gaussian", "planar",
                            "pattern", "fourier", "arcsine", "disk", "fourierx", "fourierx2d", "zgaussian",
-                           "line", "slit", "pencilarray", "pattern3d", "hyperboloid", "ring", ""
+                           "line", "slit", "pencilarray", "pattern3d", "hyperboloid", "ring", "volumetric", ""
                           };
 
 /**
@@ -1650,8 +1650,60 @@ void mcx_preprocess(Config* cfg) {
         MCX_ERROR(-4, "the 'vol' field in the input structure can not be empty");
     }
 
-    if ((cfg->srctype == MCX_SRC_PATTERN || cfg->srctype == MCX_SRC_PATTERN3D) && cfg->srcpattern == NULL) {
-        MCX_ERROR(-4, "the 'srcpattern' field can not be empty when your 'srctype' is 'pattern'");
+    if ((cfg->srctype == MCX_SRC_PATTERN || cfg->srctype == MCX_SRC_PATTERN3D ||
+            cfg->srctype == MCX_SRC_VOLUMETRIC) && cfg->srcpattern == NULL) {
+        MCX_ERROR(-4, "the 'srcpattern' field can not be empty for pattern or volumetric sources");
+    }
+
+    if (cfg->srctype == MCX_SRC_VOLUMETRIC) {
+        int nx = (int)cfg->srcparam1.x;
+        int ny = (int)cfg->srcparam1.y;
+        int nz = (int)cfg->srcparam1.z;
+        size_t count;
+        double total = 0.0;
+
+        if (cfg->srcnum != 1) {
+            MCX_ERROR(-4, "the 'volumetric' source does not support photon-sharing");
+        }
+
+        if (nx <= 0 || ny <= 0 || nz <= 0 ||
+                fabsf(cfg->srcparam1.x - nx) > EPS ||
+                fabsf(cfg->srcparam1.y - ny) > EPS ||
+                fabsf(cfg->srcparam1.z - nz) > EPS) {
+            MCX_ERROR(-4, "the 'volumetric' source dimensions must be positive integers");
+        }
+
+        if (cfg->srcpos.x < 0.f || cfg->srcpos.y < 0.f || cfg->srcpos.z < 0.f ||
+                cfg->srcpos.x + nx > cfg->dim.x ||
+                cfg->srcpos.y + ny > cfg->dim.y ||
+                cfg->srcpos.z + nz > cfg->dim.z) {
+            MCX_ERROR(-4, "the 'volumetric' source box must be inside the domain");
+        }
+
+        count = (size_t)nx * (size_t)ny * (size_t)nz;
+
+        for (size_t i = 0; i < count; i++) {
+            if (!isfinite(cfg->srcpattern[i]) || cfg->srcpattern[i] < 0.f) {
+                MCX_ERROR(-4, "the 'volumetric' source weights must be finite and nonnegative");
+            }
+
+            total += cfg->srcpattern[i];
+        }
+
+        if (!(total > 0.0) || !isfinite(total)) {
+            MCX_ERROR(-4, "the 'volumetric' source weights must have a finite positive sum");
+        }
+
+        {
+            double cumulative = 0.0;
+
+            for (size_t i = 0; i < count; i++) {
+                cumulative += cfg->srcpattern[i];
+                cfg->srcpattern[i] = (float)(cumulative / total);
+            }
+        }
+
+        cfg->srcpattern[count - 1] = 1.f;
     }
 
     if (cfg->steps.x != 1.f && cfg->unitinmm == 1.f) {
@@ -2438,7 +2490,8 @@ void mcx_loadconfig(FILE* in, Config* cfg) {
 
                 MCX_ASSERT(fread(cfg->srcpattern, cfg->srcparam1.w * cfg->srcparam2.w * cfg->srcnum, sizeof(float), fp) == sizeof(float));
                 fclose(fp);
-            } else if (cfg->srctype == MCX_SRC_PATTERN3D && cfg->srcparam1.x * cfg->srcparam1.y * cfg->srcparam1.z > 0) {
+            } else if ((cfg->srctype == MCX_SRC_PATTERN3D || cfg->srctype == MCX_SRC_VOLUMETRIC) &&
+                       cfg->srcparam1.x * cfg->srcparam1.y * cfg->srcparam1.z > 0) {
                 char patternfile[MAX_PATH_LENGTH];
                 FILE* fp;
 

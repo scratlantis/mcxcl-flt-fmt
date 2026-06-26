@@ -61,7 +61,8 @@ const char* sourceflag[] = {"-DMCX_SRC_PENCIL", "-DMCX_SRC_ISOTROPIC", "-DMCX_SR
                             "-DMCX_SRC_GAUSSIAN", "-DMCX_SRC_PLANAR", "-DMCX_SRC_PATTERN", "-DMCX_SRC_FOURIER",
                             "-DMCX_SRC_ARCSINE", "-DMCX_SRC_DISK", "-DMCX_SRC_FOURIERX", "-DMCX_SRC_FOURIERX2D",
                             "-DMCX_SRC_ZGAUSSIAN", "-DMCX_SRC_LINE", "-DMCX_SRC_SLIT", "-DMCX_SRC_PENCILARRAY",
-                            "-DMCX_SRC_PATTERN3D", "-DMCX_SRC_HYPERBOLOID_GAUSSIAN", "-DMCX_SRC_RING"
+                            "-DMCX_SRC_PATTERN3D", "-DMCX_SRC_HYPERBOLOID_GAUSSIAN", "-DMCX_SRC_RING",
+                            "-DMCX_SRC_VOLUMETRIC"
                            };
 
 const char* debugopt[] = {"-DMCX_DEBUG_RNG=1", "-DMCX_DEBUG_MOVE=2", "-DMCX_DEBUG_PROGRESS=4", "-DMCX_DEBUG_MOVE_ONLY=8"};
@@ -827,7 +828,7 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
 
             if (cfg->srctype == MCX_SRC_PATTERN) {
                 OCL_TRY(((gsrcpattern[i] = clCreateBuffer(mcxcontext, RO_MEM, sizeof(float) * (int)(cfg->srcparam1.w * cfg->srcparam2.w) * cfg->srcnum, cfg->srcpattern, &status), status)));
-            } else if (cfg->srctype == MCX_SRC_PATTERN3D) {
+            } else if (cfg->srctype == MCX_SRC_PATTERN3D || cfg->srctype == MCX_SRC_VOLUMETRIC) {
                 OCL_TRY(((gsrcpattern[i] = clCreateBuffer(mcxcontext, RO_MEM, sizeof(float) * (int)(cfg->srcparam1.x * cfg->srcparam1.y * cfg->srcparam1.z) * cfg->srcnum, cfg->srcpattern, &status), status)));
             } else {
                 gsrcpattern[i] = NULL;

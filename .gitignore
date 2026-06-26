@@ -16,6 +16,14 @@ compile_commands.json
 *.dll
 *.exe
 *.png
+*.mc2
+*.npy
+*.bin
+
+# Generated example simulation outputs
+example/digimouse/fluence_moments/marked_source/
+example/digimouse/marked_source_output/
+
 # Local Python/editor state
 __pycache__/
 *.egg-info/

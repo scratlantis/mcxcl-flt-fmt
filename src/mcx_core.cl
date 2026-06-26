@@ -1519,7 +1519,7 @@ __device__ int launchnewphoton(float4* p, float4* v, Stokes* s, float4* f, short
                     tshift += ((int)ppath[GPU_PARAM(gcfg, w0offset) - 1] - 1) * (int)GPU_PARAM(gcfg, maxgate);
                 }
 
-#if !defined(MCX_SRC_PATTERN) && !defined(MCX_SRC_PATTERN3D)
+#if !defined(MCX_SRC_PATTERN) && !defined(MCX_SRC_PATTERN3D) && !defined(MCX_SRC_VOLUMETRIC)
 #ifdef USE_ATOMIC
                 float oldval = atomicadd(field + *idx1d + tshift * gcfg->dimlen.z, -p[0].w);
 
@@ -1662,6 +1662,45 @@ __device__ int launchnewphoton(float4* p, float4* v, Stokes* s, float4* f, short
         if (ispencil) {
 #endif
             /* pencil beam: position and direction already set from launchsrc */
+#endif
+
+            /* --- Fluence-weighted volumetric source --- */
+#if defined(__NVCC__) || defined(MCX_SRC_VOLUMETRIC)
+#ifdef __NVCC__
+        } else if (gcfg->srctype == MCX_SRC_VOLUMETRIC) {
+#endif
+            {
+                uint nx = (uint)launchsrc->param1.x;
+                uint ny = (uint)launchsrc->param1.y;
+                uint count = nx * ny * (uint)launchsrc->param1.z;
+                uint lo = 0;
+                uint hi = count - 1;
+                float sample = rand_uniform01(t);
+
+                while (lo < hi) {
+                    uint mid = lo + ((hi - lo) >> 1);
+
+                    if (srcpattern[mid] <= sample) {
+                        lo = mid + 1;
+                    } else {
+                        hi = mid;
+                    }
+                }
+
+                {
+                    uint localx = lo % nx;
+                    uint localy = (lo / nx) % ny;
+                    uint localz = lo / (nx * ny);
+                    p[0] = FLOAT4(
+                               launchsrc->pos.x + localx + rand_uniform01(t) * JUST_BELOW_ONE,
+                               launchsrc->pos.y + localy + rand_uniform01(t) * JUST_BELOW_ONE,
+                               launchsrc->pos.z + localz + rand_uniform01(t) * JUST_BELOW_ONE,
+                               launchsrc->pos.w);
+                }
+
+                ppath[4] = p[0].w;
+                *Lmove = -1.f;
+            }
 #endif
 
             /* --- Planar / Pattern / Pattern3D / Fourier / PencilArray --- */
@@ -2910,7 +2949,7 @@ __kernel void mcx_main_loop(
                     }
 
 #else
-#if !defined(MCX_SRC_PATTERN) && !defined(MCX_SRC_PATTERN3D)
+#if !defined(MCX_SRC_PATTERN) && !defined(MCX_SRC_PATTERN3D) && !defined(MCX_SRC_VOLUMETRIC)
                     float deposit = (GPU_PARAM(gcfg, outputtype) == otFluenceSq) ? weight * weight : weight;
                     float oldval = atomicadd(field + idx1dold + tshift * gcfg->dimlen.z, deposit);
 
