@@ -1,0 +1,22 @@
+{
+  "base_config": "/home/sidney/repos/hiro/mcxcl-flt-fmt/example/digimouse/digimouse.json",
+  "fluence": "/home/sidney/repos/hiro/mcxcl-flt-fmt/example/digimouse/fluence_moments/fluence.npy",
+  "mask": "/home/sidney/repos/hiro/mcxcl-flt-fmt/example/digimouse/fluence_moments/marked_source/marked_mask.npy",
+  "shape": [
+    190,
+    496,
+    104
+  ],
+  "n_marked_voxels": 2537,
+  "detector_face": "-z",
+  "rows": 8,
+  "cols": 8,
+  "margin": 16,
+  "photons_per_detector": 200000,
+  "base_seed": 20260629,
+  "n_detectors": 64,
+  "masked_forward": "/home/sidney/repos/hiro/mcxcl-flt-fmt/example/digimouse/adjoint_sensor_output/masked_forward.npy",
+  "masked_adjoint": "/home/sidney/repos/hiro/mcxcl-flt-fmt/example/digimouse/adjoint_sensor_output/masked_adjoint.npy",
+  "detector_positions": "/home/sidney/repos/hiro/mcxcl-flt-fmt/example/digimouse/adjoint_sensor_output/detector_positions.npy",
+  "marked_mask": "/home/sidney/repos/hiro/mcxcl-flt-fmt/example/digimouse/adjoint_sensor_output/marked_mask.npy"
+}
