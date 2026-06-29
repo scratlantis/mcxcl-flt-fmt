@@ -365,11 +365,11 @@ def main() -> None:
         ppaths = col_offset = None
         if jdat_path.exists():
             ppaths = load_detp_ppaths(jdat_path)
-            col_offset = 1          # jdat excludes medium 0 (vacuum)
+            col_offset = 1          # jdat: columns = media 1..N (vacuum excluded)
             jdat_path.unlink()
         elif mch_path.exists():
             ppaths = load_detp_mch_ppaths(mch_path)
-            col_offset = 0          # mch includes medium 0
+            col_offset = 1          # mch: same — ppath[i] = medium i+1 (vacuum excluded)
             mch_path.unlink()
 
         if ppaths is not None and ppaths.shape[0] > 0:
