@@ -1,12 +1,12 @@
 {
   "Session": {
     "ID": "adj_det_0000",
-    "Photons": 200000,
+    "Photons": 1000000,
     "RNGSeed": 20260629,
     "DoMismatch": true,
     "DoSaveVolume": true,
     "DoNormalize": true,
-    "DoPartialPath": false,
+    "DoPartialPath": true,
     "DoSaveRef": false,
     "DoSaveExit": false,
     "DoSaveSeed": false,
@@ -171,9 +171,9 @@
     "Source": {
       "Type": "isotropic",
       "Pos": [
-        16.0,
-        16.0,
-        0.0
+        189.0,
+        178.05,
+        40.85
       ],
       "Dir": [
         0.0,
@@ -182,7 +182,16 @@
         0.0
       ]
     },
-    "Detector": []
+    "Detector": [
+      {
+        "Pos": [
+          70.81071402470218,
+          191.64751881897246,
+          55.40645326317328
+        ],
+        "R": 60.459384765076905
+      }
+    ]
   },
   "Shapes": {
     "_ArrayType_": "uint8",
