@@ -92,6 +92,8 @@ class SensorViewer(tk.Tk):
         source_pos: list[float] | None = None,
         path_sens_adj: np.ndarray | None = None,
         mua_orig: np.ndarray | None = None,
+        path_sens_adj2: np.ndarray | None = None,
+        n_photons: int = 1,
     ):
         super().__init__()
         self.output_dir = output_dir
@@ -107,8 +109,10 @@ class SensorViewer(tk.Tk):
         self.label_colors = (
             _make_label_colors(int(labels.max()) + 1) if labels is not None else None
         )
-        self.path_sens_adj = path_sens_adj  # [n_dets, n_media] or None
-        self.mua_orig = mua_orig  # [n_media] mm⁻¹, or None
+        self.path_sens_adj  = path_sens_adj   # [n_dets, n_media] or None
+        self.path_sens_adj2 = path_sens_adj2  # [n_dets, n_media] sum-of-squares, or None
+        self.mua_orig    = mua_orig   # [n_media] mm⁻¹, or None
+        self.n_photons   = n_photons  # photons launched per detector
 
         # Precompute all detector measurements: [n_dets]
         self.measurements = self.masked_adjoint @ self.masked_forward
@@ -127,6 +131,7 @@ class SensorViewer(tk.Tk):
         self.selected_medium = tk.IntVar(value=1)
         self.delta_mua = tk.DoubleVar(value=0.0)
         self.heatmap_mode = tk.StringVar(value="measurements")
+        self.global_norm  = tk.BooleanVar(value=False)
         self._medium_cb: ttk.Combobox | None = None
 
         self.slice_photo: tk.PhotoImage | None = None
@@ -230,15 +235,22 @@ class SensorViewer(tk.Tk):
         heat_top.pack(fill="x", pady=(0, 2))
         self.heat_title_label = ttk.Label(heat_top, text="Sensor measurements")
         self.heat_title_label.pack(side="left")
-        if True:  # mode toggle always shown; sensitivity option requires path_sens_adj
-            ttk.Radiobutton(
-                heat_top, text="M", value="measurements",
-                variable=self.heatmap_mode, command=self._heatmap_mode_changed,
-            ).pack(side="right")
-            ttk.Radiobutton(
-                heat_top, text="S", value="sensitivity",
-                variable=self.heatmap_mode, command=self._heatmap_mode_changed,
-            ).pack(side="right", padx=(0, 4))
+        ttk.Radiobutton(
+            heat_top, text="M", value="measurements",
+            variable=self.heatmap_mode, command=self._heatmap_mode_changed,
+        ).pack(side="right")
+        ttk.Radiobutton(
+            heat_top, text="S", value="sensitivity",
+            variable=self.heatmap_mode, command=self._heatmap_mode_changed,
+        ).pack(side="right", padx=(0, 4))
+        ttk.Radiobutton(
+            heat_top, text="U", value="uncertainty",
+            variable=self.heatmap_mode, command=self._heatmap_mode_changed,
+        ).pack(side="right", padx=(0, 4))
+        ttk.Checkbutton(
+            heat_top, text="global norm",
+            variable=self.global_norm, command=self._render_heatmap,
+        ).pack(side="right", padx=(0, 8))
         self.heat_canvas = tk.Canvas(
             right,
             background="#151515",
@@ -353,19 +365,37 @@ class SensorViewer(tk.Tk):
                 self.heatmap_mode.set("measurements")
                 return
             self._update_sensitivity_title()
+        elif mode == "uncertainty":
+            if self.path_sens_adj2 is None:
+                self.heatmap_mode.set("measurements")
+                return
+            self._update_sensitivity_title()
         else:
             self.heat_title_label.configure(text="Sensor measurements")
         self._render_heatmap()
 
     def _update_sensitivity_title(self) -> None:
+        mode = self.heatmap_mode.get()
         m = self.selected_medium.get()
         mua = float(self.mua_orig[m]) if self.mua_orig is not None else 0.0
-        sens = self.path_sens_adj[:, m]
-        nz = int(np.count_nonzero(sens))
-        mn, mx = float(sens.min()), float(sens.max())
+        if mode == "uncertainty" and self.path_sens_adj2 is not None:
+            vals = self._uncertainty_values(m)
+            label = "Uncertainty"
+        else:
+            vals = self.path_sens_adj[:, m]
+            label = "Sensitivity"
+        nz = int(np.count_nonzero(vals))
+        mn, mx = float(vals.min()), float(vals.max())
         self.heat_title_label.configure(
-            text=f"Sensitivity  m{m} μa={mua:.4g}  [{mn:.3g}, {mx:.3g}]  nonzero={nz}/{len(sens)}"
+            text=f"{label}  m{m} μa={mua:.4g}  [{mn:.3g}, {mx:.3g}]  nonzero={nz}/{len(vals)}"
         )
+
+    def _uncertainty_values(self, m: int) -> np.ndarray:
+        """Inverse effective sample size S2·N / S1² — high when few photons dominate."""
+        s1 = self.path_sens_adj[:, m]
+        s2 = self.path_sens_adj2[:, m]
+        n = 1#self.n_photons
+        return np.where(s1 > 0, s2 * n / (s1 ** 2), 0.0)
 
     def _heatmap_click(self, event: tk.Event) -> None:
         cw = max(1, self.heat_canvas.winfo_width())
@@ -424,8 +454,17 @@ class SensorViewer(tk.Tk):
 
         return np.clip(rgb, 0, 255).astype(np.uint8).tobytes(order="C")
 
-    def _to_heat_rgb(self, grid: np.ndarray) -> bytes:
-        """Black → red → yellow thermal colormap for the measurements grid."""
+    def _to_heat_rgb(
+        self,
+        grid: np.ndarray,
+        vmin: float | None = None,
+        vmax: float | None = None,
+    ) -> bytes:
+        """Black → red → yellow thermal colormap for the measurements grid.
+
+        vmin/vmax: optional pre-computed range (e.g. global norm across all media).
+        When None the range is derived from this grid alone.
+        """
         values = grid.astype(np.float64)
         out = np.zeros((*grid.shape, 3), dtype=np.uint8)
         finite = np.isfinite(values) & (values > 0)
@@ -435,9 +474,13 @@ class SensorViewer(tk.Tk):
                 shown[finite] = np.log10(values[finite])
                 shown[~finite] = np.nan
                 finite = np.isfinite(shown)
+                if vmin is not None and vmin > 0:
+                    vmin = np.log10(vmin)
+                if vmax is not None and vmax > 0:
+                    vmax = np.log10(vmax)
             if np.any(finite):
-                lo = float(np.min(shown[finite]))
-                hi = float(np.max(shown[finite]))
+                lo = float(np.min(shown[finite])) if vmin is None else float(vmin)
+                hi = float(np.max(shown[finite])) if vmax is None else float(vmax)
                 if hi <= lo:
                     hi = lo + 1.0
                 t = np.zeros_like(shown)
@@ -546,12 +589,31 @@ class SensorViewer(tk.Tk):
         )
 
     def _render_heatmap(self) -> None:
-        if self.heatmap_mode.get() == "sensitivity" and self.path_sens_adj is not None:
-            m = self.selected_medium.get()
+        mode = self.heatmap_mode.get()
+        m = self.selected_medium.get()
+        if mode == "sensitivity" and self.path_sens_adj is not None:
             meas = self.path_sens_adj[:, m]
+        elif mode == "uncertainty" and self.path_sens_adj2 is not None:
+            meas = self._uncertainty_values(m)
         else:
             meas = self._perturbed_measurements()
-        pixels = self._to_heat_rgb(meas.reshape(self.rows, self.cols))
+
+        vmin = vmax = None
+        if self.global_norm.get():
+            if mode == "sensitivity" and self.path_sens_adj is not None:
+                all_vals = self.path_sens_adj  # [n_dets, n_media]
+            elif mode == "uncertainty" and self.path_sens_adj2 is not None:
+                s1 = self.path_sens_adj
+                s2 = self.path_sens_adj2
+                all_vals = np.where(s1 > 0, s2 / s1, 0.0)
+            else:
+                all_vals = None
+            if all_vals is not None:
+                pos = all_vals[all_vals > 0]
+                if pos.size:
+                    vmin, vmax = float(pos.min()), float(pos.max())
+
+        pixels = self._to_heat_rgb(meas.reshape(self.rows, self.cols), vmin=vmin, vmax=vmax)
         photo = self._photo_from_pixels(self.cols, self.rows, pixels)
 
         cw = max(1, self.heat_canvas.winfo_width())
@@ -718,13 +780,18 @@ def main() -> None:
 
     # Load per-medium path sensitivity if available (requires DoPartialPath run)
     path_sens_adj: np.ndarray | None = None
+    path_sens_adj2: np.ndarray | None = None
     mua_orig: np.ndarray | None = None
+    n_photons: int = int(meta.get("photons_per_detector", 1))
     path_sens_path = output_dir / "path_sens_adj.npy"
     if path_sens_path.exists():
         path_sens_adj = np.load(path_sens_path)
         mua_list = meta.get("mua_orig")
         if mua_list:
             mua_orig = np.array(mua_list, dtype=np.float64)
+        path_sens_adj2_path = output_dir / "path_sens_adj2.npy"
+        if path_sens_adj2_path.exists():
+            path_sens_adj2 = np.load(path_sens_adj2_path)
     else:
         print("note: path_sens_adj.npy not found — perturbation panel disabled")
 
@@ -740,6 +807,8 @@ def main() -> None:
         source_pos=source_pos,
         path_sens_adj=path_sens_adj,
         mua_orig=mua_orig,
+        path_sens_adj2=path_sens_adj2,
+        n_photons=n_photons,
     )
     viewer.mainloop()
 

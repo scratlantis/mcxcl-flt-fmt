@@ -1023,6 +1023,42 @@
         "cwd": "${workspaceFolder}/example/digimouse"
       },
       "problemMatcher": []
+    },
+    {
+      "label": "Digimouse: run adjoint sensor (+x, 4×4, 1M)",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "run_adjoint_sensor.py",
+        "--mask", "fluence_moments/marked_source/marked_mask.npy",
+        "--detector-face", "px",
+        "--rows", "4",
+        "--cols", "4",
+        "--margin", "16",
+        "--photons", "1000000",
+        "--spread", "0.3"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/example/digimouse",
+        "env": {
+          "TMPDIR": "/tmp/pocl-temp",
+          "POCL_CACHE_DIR": "/tmp/pocl-cache"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Digimouse: view adjoint sensor",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "view_sensor.py",
+        "adjoint_sensor_output/"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/example/digimouse"
+      },
+      "problemMatcher": []
     }
   ],
   "inputs": [
