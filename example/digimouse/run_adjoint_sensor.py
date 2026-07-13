@@ -313,8 +313,9 @@ def main() -> None:
     n_dets = args.rows * args.cols
     det_positions_grid = np.array(positions, dtype=np.float32).reshape(args.rows, args.cols, 3)
 
-    masked_adjoint = np.zeros((n_dets, n_marked), dtype=np.float32)
-    path_sens_adj = np.zeros((n_dets, n_media), dtype=np.float64)
+    masked_adjoint  = np.zeros((n_dets, n_marked), dtype=np.float32)
+    path_sens_adj   = np.zeros((n_dets, n_media),  dtype=np.float64)
+    path_sens_adj2  = np.zeros((n_dets, n_media),  dtype=np.float64)  # sum of squared contributions
 
     for det_idx, det_pos in enumerate(positions):
         row = det_idx // args.cols
@@ -376,26 +377,29 @@ def main() -> None:
             n_cols = ppaths.shape[1]
             mua_slice = mua_orig[col_offset : col_offset + n_cols]
             weights = np.exp(-(ppaths * mua_slice).sum(axis=1))
-            path_sens_adj[det_idx, col_offset : col_offset + n_cols] = (
-                fwd_mean * (weights[:, None] * ppaths).sum(axis=0)
-            )
+            contribs = weights[:, None] * ppaths                      # [n_photons, n_cols]
+            sl = slice(col_offset, col_offset + n_cols)
+            path_sens_adj [det_idx, sl] = fwd_mean *  contribs.sum(axis=0)
+            path_sens_adj2[det_idx, sl] = fwd_mean * (contribs ** 2).sum(axis=0)
             print(f"  {ppaths.shape[0]} photons  sens_sum={path_sens_adj[det_idx].sum():.4g}")
 
     masked_forward_path = output_dir / "masked_forward.npy"
     masked_adjoint_path = output_dir / "masked_adjoint.npy"
     det_positions_path = output_dir / "detector_positions.npy"
     mask_copy_path = output_dir / "marked_mask.npy"
-    path_sens_adj_path = output_dir / "path_sens_adj.npy"
+    path_sens_adj_path  = output_dir / "path_sens_adj.npy"
+    path_sens_adj2_path = output_dir / "path_sens_adj2.npy"
 
     np.save(masked_forward_path, masked_forward)
     np.save(masked_adjoint_path, masked_adjoint)
     np.save(det_positions_path, det_positions_grid)
     np.save(mask_copy_path, mask)
+    np.save(path_sens_adj_path, path_sens_adj)
+    np.save(path_sens_adj2_path, path_sens_adj2)
 
     nz = int(np.count_nonzero(path_sens_adj))
     print(f"sensitivity: nonzero {nz}/{path_sens_adj.size}  "
           f"range [{path_sens_adj.min():.4g}, {path_sens_adj.max():.4g}]")
-    np.save(path_sens_adj_path, path_sens_adj)
 
     metadata = {
         "base_config": str(config_path),
@@ -416,8 +420,9 @@ def main() -> None:
         "masked_adjoint": str(masked_adjoint_path),
         "detector_positions": str(det_positions_path),
         "marked_mask": str(mask_copy_path),
-        "path_sens_adj": str(path_sens_adj_path),
-        "sens_method": "born_global",
+        "path_sens_adj":  str(path_sens_adj_path),
+        "path_sens_adj2": str(path_sens_adj2_path),
+        "sens_method": "path_length_weighted",
     }
     (output_dir / "adjoint_sensor_run.json").write_text(json.dumps(metadata, indent=2) + "\n")
     print(f"\ndone: {n_dets} detectors, {n_marked:,} marked voxels")
