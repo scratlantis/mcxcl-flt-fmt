@@ -267,7 +267,7 @@ the verbose command line options in MCX.
                        source, see cfg.srctype='pattern' for details
                        Example <demo_photon_sharing.m>
        cfg.issrcfrom0: 1-first voxel is [0 0 0], [0]- first voxel is [1 1 1]
-       cfg.replaydet:  only works when cfg.outputtype is 'jacobian', 'wl', 'nscat', or 'wp' and cfg.seed is an array
+       cfg.replaydet:  only works when cfg.outputtype is 'jacobian', 'fluo', 'wl', 'nscat', or 'wp' and cfg.seed is an array
                        -1 replay all detectors and save in separate volumes (output has 5 dimensions)
                         0 replay all detectors and sum all Jacobians into one volume
                         a positive number: the index of the detector to replay and obtain Jacobians
@@ -525,5 +525,4 @@ Screenshot for using MCXLAB-CL in GNU Octave:
  [TranYan2020] A.P.Tran, S.Yan and Q.Fang, "Improving model-based fNIRS
  analysis using mesh-based anatomical and light-transport models", 
  Neurophotonics, 7(1), 015008
-
 
