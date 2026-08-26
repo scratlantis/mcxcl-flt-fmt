@@ -1377,7 +1377,7 @@ py::dict pmcxcl_interface(const py::dict& user_cfg) {
             mcx_config.exportdetected = NULL;
 
             if (mcx_config.replay.fluoweight && mcx_config.detectedcount > 0) {
-                auto fluoweight = py::array_t<float>(mcx_config.detectedcount);
+                auto fluoweight = py::array_t<float>(std::initializer_list<size_t>({(size_t)mcx_config.detectedcount}));
                 memcpy(fluoweight.mutable_data(), mcx_config.replay.fluoweight,
                        mcx_config.detectedcount * sizeof(float));
                 output["fluoweight"] = fluoweight;

@@ -746,7 +746,7 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
             if (cfg->outputtype == otFluoReplay && cfg->replay.fluoweight) {
                 OCL_TRY(((gfluoweight = clCreateBuffer(mcxcontext, RO_MEM, sizeof(float) * cfg->nphoton, cfg->replay.fluoweight, &status), status)));
             }
-        } else if (cfg->outputtype == otFluoReplay && cfg->muaf) {
+        } else if (cfg->muaf && cfg->muf) {
             OCL_TRY(((gfluoweight = clCreateBuffer(mcxcontext, CL_MEM_READ_WRITE, sizeof(float) * cfg->maxdetphoton, NULL, &status), status)));
         }
 
@@ -1264,6 +1264,7 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
 
                         cfg->his.detected += detected;
                         detected = MIN(detected, cfg->maxdetphoton);
+                        uint prevdetected = cfg->detectedcount;
 
                         if (cfg->exportdetected) {
                             cfg->exportdetected = (float*)realloc(cfg->exportdetected, (cfg->detectedcount + detected) * hostdetreclen * sizeof(float));
@@ -1285,10 +1286,10 @@ void mcx_run_simulation(Config* cfg, float* fluence, float* totalenergy) {
                             free(seeddata);
                         }
 
-                        if (gfluoweight && cfg->seed != SEED_FROM_FILE && cfg->outputtype == otFluoReplay) {
-                            cfg->replay.fluoweight = (float*)realloc(cfg->replay.fluoweight, detected * sizeof(float));
+                        if (gfluoweight && cfg->seed != SEED_FROM_FILE) {
+                            cfg->replay.fluoweight = (float*)realloc(cfg->replay.fluoweight, (prevdetected + detected) * sizeof(float));
                             OCL_ASSERT(clEnqueueReadBuffer(mcxqueue[devid], gfluoweight, CL_TRUE, 0,
-                                                           sizeof(float) * detected, cfg->replay.fluoweight, 0, NULL, NULL));
+                                                           sizeof(float) * detected, cfg->replay.fluoweight + prevdetected, 0, NULL, NULL));
                         }
                     }
 
